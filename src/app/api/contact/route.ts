@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { saveLead, getAllLeads, Lead } from "@/lib/leads";
 
 interface ContactRequest {
   name: string;
@@ -8,9 +9,6 @@ interface ContactRequest {
   preferredContact: "whatsapp" | "email";
   selectedPackage: string;
 }
-
-// In-memory storage for leads (in production, use a database)
-const leads: Map<string, ContactRequest & { id: string; createdAt: Date; status: string }> = new Map();
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,14 +25,21 @@ export async function POST(request: NextRequest) {
     // Generate lead ID
     const leadId = `L-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Store lead
-    const lead = {
+    // Create lead object
+    const lead: Lead = {
       id: leadId,
-      ...body,
-      createdAt: new Date(),
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      projectDescription: body.projectDescription || "",
+      preferredContact: body.preferredContact,
+      selectedPackage: body.selectedPackage,
+      createdAt: new Date().toISOString(),
       status: "new",
     };
-    leads.set(leadId, lead);
+
+    // Save lead
+    saveLead(lead);
 
     // Log the lead
     console.log("=".repeat(60));
@@ -107,6 +112,6 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   // Return all leads (admin only - add auth in production)
   return NextResponse.json({
-    leads: Array.from(leads.values()),
+    leads: getAllLeads(),
   });
 }
