@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import VideoHero from "@/components/VideoHero";
+import ContactSection from "@/components/ContactSection";
 
 export default function Home() {
   return (
@@ -330,29 +330,7 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-32 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-accent text-sm font-medium mb-4 tracking-wide uppercase">Get in touch</p>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-            Let&apos;s build something
-            <br />
-            <span className="text-muted">together</span>
-          </h2>
-          <p className="text-lg text-muted mb-12 leading-relaxed">
-            Have a project in mind? We&apos;d love to hear about it. Drop us a message and let&apos;s explore how we can help bring your ideas to life.
-          </p>
-          
-          <a 
-            href="mailto:ai@n01.app"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity text-lg"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            ai@n01.app
-          </a>
-        </div>
-      </section>
+      <ContactSection />
 
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-foreground/10">

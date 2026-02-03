@@ -25,7 +25,7 @@ export const packages: PricingPackage[] = [
   {
     id: "starter",
     name: "STARTER",
-    price: 149,
+    price: 49,
     description: "Perfect for landing pages and simple websites",
     features: [
       "Landing page (1-3 pages)",
@@ -37,12 +37,12 @@ export const packages: PricingPackage[] = [
       "Vercel deployment",
     ],
     delivery: "48 hours",
-    revisionCost: 29,
+    revisionCost: 9,
   },
   {
     id: "pro",
     name: "PRO",
-    price: 399,
+    price: 133,
     description: "Ideal for MVPs and web applications",
     features: [
       "Web app (5-10 pages)",
@@ -56,12 +56,12 @@ export const packages: PricingPackage[] = [
     ],
     delivery: "5 days",
     popular: true,
-    revisionCost: 49,
+    revisionCost: 15,
   },
   {
     id: "scale",
     name: "SCALE",
-    price: 999,
+    price: 333,
     description: "Full-featured applications ready to scale",
     features: [
       "Full application",
@@ -76,7 +76,7 @@ export const packages: PricingPackage[] = [
       "Documentation",
     ],
     delivery: "10 days",
-    revisionCost: 99,
+    revisionCost: 29,
   },
 ];
 
@@ -89,13 +89,13 @@ export function estimateCustomProject(params: {
   hasPayments: boolean;
   hasMobile: boolean;
 }): QuoteEstimate {
-  const BASE_PRICE = 99;
-  const PAGE_COST = 50;
-  const FEATURE_COST = 100;
-  const INTEGRATION_COST = 150;
-  const AUTH_COST = 100;
-  const PAYMENTS_COST = 150;
-  const MOBILE_COST = 200;
+  const BASE_PRICE = 33;
+  const PAGE_COST = 17;
+  const FEATURE_COST = 33;
+  const INTEGRATION_COST = 50;
+  const AUTH_COST = 33;
+  const PAYMENTS_COST = 50;
+  const MOBILE_COST = 67;
 
   let totalPrice = BASE_PRICE;
   totalPrice += params.pages * PAGE_COST;
