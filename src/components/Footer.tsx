@@ -14,7 +14,7 @@ export default function Footer() {
           <div className="text-sm text-muted">
             © {new Date().getFullYear()} n01.app. All rights reserved.
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-6">
             <Link href="/" className="text-sm text-muted hover:text-foreground transition-colors">
               Home
             </Link>
@@ -27,6 +27,12 @@ export default function Footer() {
             >
               Get Quote
             </button>
+            <Link href="/terms" className="text-sm text-muted hover:text-foreground transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-sm text-muted hover:text-foreground transition-colors">
+              Privacy
+            </Link>
             <a 
               href="https://github.com/clawmvp" 
               target="_blank" 
