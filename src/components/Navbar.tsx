@@ -75,6 +75,16 @@ export default function Navbar() {
           >
             Work
           </Link>
+          <Link 
+            href="/pricing" 
+            className={`hidden sm:block text-sm font-medium transition-colors ${
+              scrolled 
+                ? "text-accent hover:text-accent/80" 
+                : "text-accent hover:text-accent/80"
+            }`}
+          >
+            Pricing
+          </Link>
           <ThemeToggle />
           <Link 
             href="#contact" 
