@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import VideoHero from "@/components/VideoHero";
+import TrustBadges from "@/components/TrustBadges";
 import ContentSection from "@/components/ContentSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
@@ -13,6 +14,9 @@ export default function Home() {
 
       {/* Hero Section with Video Background */}
       <VideoHero />
+
+      {/* Trust Badges */}
+      <TrustBadges />
 
       {/* How It Works Section */}
       <section id="services" className="py-32 px-6">
