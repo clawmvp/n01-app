@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
@@ -27,11 +28,20 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link 
           href="/" 
-          className={`text-xl font-semibold tracking-tight transition-colors ${
-            scrolled ? "text-foreground" : "text-white"
-          }`}
+          className="flex items-center gap-2"
         >
-          n01<span className="text-accent">.app</span>
+          <Image 
+            src="/logo.png" 
+            alt="n01.app" 
+            width={36} 
+            height={36} 
+            className="rounded-lg"
+          />
+          <span className={`text-xl font-semibold tracking-tight transition-colors ${
+            scrolled ? "text-foreground" : "text-white"
+          }`}>
+            n01<span className="text-accent">.app</span>
+          </span>
         </Link>
         
         <div className="flex items-center gap-6">
