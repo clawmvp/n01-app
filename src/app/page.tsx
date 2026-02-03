@@ -12,61 +12,203 @@ export default function Home() {
       {/* Hero Section with Video Background */}
       <VideoHero />
 
-      {/* Services Section */}
+      {/* How It Works Section */}
       <section id="services" className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
-            <p className="text-accent text-sm font-medium mb-4 tracking-wide uppercase">What we do</p>
+            <p className="text-accent text-sm font-medium mb-4 tracking-wide uppercase">How it works</p>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Full-stack AI expertise
+              Autonomous project delivery
             </h2>
+            <p className="text-muted mt-6 max-w-2xl mx-auto">
+              Send us your requirements. Our AI agents collaborate, code, test, and deploy - all without human intervention.
+            </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Service 1 */}
-            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors">
-              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6">
+            {/* Step 1 */}
+            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors relative">
+              <div className="absolute -top-4 left-8 px-3 py-1 bg-accent text-white text-xs font-bold rounded-full">01</div>
+              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 mt-2">
                 <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI Applications</h3>
+              <h3 className="text-xl font-semibold mb-3">Describe Your Project</h3>
               <p className="text-muted leading-relaxed">
-                Custom AI solutions powered by GPT-4, Claude, and other cutting-edge models. From chatbots to content generation.
+                Send us your requirements via email or chat. Our Orchestrator AI analyzes and creates the project plan.
               </p>
             </div>
 
-            {/* Service 2 */}
-            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors">
-              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6">
+            {/* Step 2 */}
+            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors relative">
+              <div className="absolute -top-4 left-8 px-3 py-1 bg-accent text-white text-xs font-bold rounded-full">02</div>
+              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 mt-2">
                 <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Blockchain & Web3</h3>
+              <h3 className="text-xl font-semibold mb-3">Agents Collaborate</h3>
               <p className="text-muted leading-relaxed">
-                Smart contracts, DeFi applications, and blockchain integrations. Solana, Ethereum, and beyond.
+                Specialized agents work in parallel: architecture, frontend, backend, testing, security, and deployment.
               </p>
             </div>
 
-            {/* Service 3 */}
-            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors">
-              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6">
+            {/* Step 3 */}
+            <div className="group p-8 rounded-2xl border border-foreground/10 hover:border-foreground/20 transition-colors relative">
+              <div className="absolute -top-4 left-8 px-3 py-1 bg-accent text-white text-xs font-bold rounded-full">03</div>
+              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 mt-2">
                 <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Modern Web Apps</h3>
+              <h3 className="text-xl font-semibold mb-3">Deployed & Live</h3>
               <p className="text-muted leading-relaxed">
-                Next.js, React, TypeScript. Beautiful, performant applications with exceptional user experiences.
+                Your project goes live on Vercel with CI/CD, documentation, and full source code on GitHub.
               </p>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Team Section */}
+      <section id="team" className="py-32 px-6 bg-foreground/[0.02]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20">
+            <p className="text-accent text-sm font-medium mb-4 tracking-wide uppercase">Meet the team</p>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              7 specialized AI agents
+            </h2>
+            <p className="text-muted mt-6 max-w-2xl mx-auto">
+              Each agent is an expert in their domain, working together under the Orchestrator&apos;s coordination.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
+            {/* NOVA - Orchestrator */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-accent transition-all">
+                <Image
+                  src="/team/avatar-nova.png"
+                  alt="NOVA"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <h3 className="font-semibold text-sm">NOVA</h3>
+              <p className="text-xs text-muted">Orchestrator</p>
+            </div>
+
+            {/* ATLAS - Architect */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-purple-500 transition-all">
+                <Image
+                  src="/team/avatar-atlas.png"
+                  alt="ATLAS"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">ATLAS</h3>
+              <p className="text-xs text-muted">Architect</p>
+            </div>
+
+            {/* PIXEL - Frontend */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-pink-500 transition-all">
+                <Image
+                  src="/team/avatar-pixel.png"
+                  alt="PIXEL"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">PIXEL</h3>
+              <p className="text-xs text-muted">Frontend Dev</p>
+            </div>
+
+            {/* NEXUS - Backend */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-green-500 transition-all">
+                <Image
+                  src="/team/avatar-nexus.png"
+                  alt="NEXUS"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">NEXUS</h3>
+              <p className="text-xs text-muted">Backend Dev</p>
+            </div>
+
+            {/* CIPHER - DevOps */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-orange-500 transition-all">
+                <Image
+                  src="/team/avatar-cipher.png"
+                  alt="CIPHER"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">CIPHER</h3>
+              <p className="text-xs text-muted">DevOps</p>
+            </div>
+
+            {/* VECTOR - QA */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-cyan-500 transition-all">
+                <Image
+                  src="/team/avatar-vector.png"
+                  alt="VECTOR"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">VECTOR</h3>
+              <p className="text-xs text-muted">QA Engineer</p>
+            </div>
+
+            {/* SENTINEL - Security */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-red-500 transition-all">
+                <Image
+                  src="/team/avatar-sentinel.png"
+                  alt="SENTINEL"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">SENTINEL</h3>
+              <p className="text-xs text-muted">Security</p>
+            </div>
+          </div>
+
+          {/* Team Stats */}
+          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-accent">24/7</div>
+              <div className="text-sm text-muted mt-2">Always Online</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-accent">7</div>
+              <div className="text-sm text-muted mt-2">Specialized Agents</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-accent">0</div>
+              <div className="text-sm text-muted mt-2">Human Bottlenecks</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-accent">∞</div>
+              <div className="text-sm text-muted mt-2">Parallel Tasks</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Work Section */}
-      <section id="work" className="py-32 px-6 bg-foreground/[0.02]">
+      <section id="work" className="py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <p className="text-accent text-sm font-medium mb-4 tracking-wide uppercase">Selected Work</p>

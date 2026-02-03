@@ -62,18 +62,18 @@ export default function VideoHero() {
         style={{ opacity }}
       >
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm text-white rounded-full text-sm mb-8 border border-white/20">
-          <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
-          AI-Powered Development
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+          7 AI Agents Online
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-6 text-white">
-          We build
+          The first
           <br />
-          <span className="text-white/60">intelligent</span> solutions
+          <span className="text-white/60">autonomous</span> AI agency
         </h1>
         
         <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-12 leading-relaxed">
-          From AI-powered applications to blockchain integrations, we create modern digital experiences that matter.
+          A team of specialized AI agents that takes your project from concept to deployment. Fully autonomous. 24/7. No human bottlenecks.
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

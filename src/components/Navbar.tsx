@@ -53,7 +53,17 @@ export default function Navbar() {
                 : "text-white/70 hover:text-white"
             }`}
           >
-            Services
+            How it works
+          </Link>
+          <Link 
+            href="#team" 
+            className={`hidden sm:block text-sm transition-colors ${
+              scrolled 
+                ? "text-muted hover:text-foreground" 
+                : "text-white/70 hover:text-white"
+            }`}
+          >
+            Team
           </Link>
           <Link 
             href="#work" 
