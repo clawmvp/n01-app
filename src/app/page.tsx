@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
@@ -10,13 +11,14 @@ export default function Home() {
           <Link href="/" className="text-xl font-semibold tracking-tight">
             n01<span className="text-accent">.app</span>
           </Link>
-          <div className="flex items-center gap-8">
-            <Link href="#services" className="text-sm text-muted hover:text-foreground transition-colors">
+          <div className="flex items-center gap-6">
+            <Link href="#services" className="hidden sm:block text-sm text-muted hover:text-foreground transition-colors">
               Services
             </Link>
-            <Link href="#work" className="text-sm text-muted hover:text-foreground transition-colors">
+            <Link href="#work" className="hidden sm:block text-sm text-muted hover:text-foreground transition-colors">
               Work
             </Link>
+            <ThemeToggle />
             <Link 
               href="#contact" 
               className="text-sm px-4 py-2 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity"
@@ -176,6 +178,60 @@ export default function Home() {
                 </p>
               </div>
             </div>
+
+            {/* Project 3 */}
+            <div className="group relative overflow-hidden rounded-2xl bg-foreground/5">
+              <div className="aspect-[16/10] relative overflow-hidden">
+                <Image
+                  src="https://images.pexels.com/photos/8438918/pexels-photo-8438918.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                  alt="AI Content Generator"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                    AI
+                  </span>
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                    Content
+                  </span>
+                </div>
+                <h3 className="text-2xl font-semibold text-white mb-2">AI Content Studio</h3>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  Automated content generation platform using GPT-4 and ElevenLabs for video scripts, voiceovers, and social media content.
+                </p>
+              </div>
+            </div>
+
+            {/* Project 4 */}
+            <div className="group relative overflow-hidden rounded-2xl bg-foreground/5">
+              <div className="aspect-[16/10] relative overflow-hidden">
+                <Image
+                  src="https://images.pexels.com/photos/3913025/pexels-photo-3913025.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                  alt="Parenting App"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                    Mobile
+                  </span>
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs">
+                    AI Assistant
+                  </span>
+                </div>
+                <h3 className="text-2xl font-semibold text-white mb-2">Parenting AI Companion</h3>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  AI-powered parenting assistant with personalized advice, milestone tracking, and expert-backed guidance for new parents.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -194,13 +250,13 @@ export default function Home() {
           </p>
           
           <a 
-            href="mailto:clawmvp@gmail.com"
+            href="mailto:ai@n01.app"
             className="inline-flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity text-lg"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            clawmvp@gmail.com
+            ai@n01.app
           </a>
         </div>
       </section>
