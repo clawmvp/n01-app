@@ -8,6 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://n01.app"),
   title: "n01.app | AI Development Agency",
   description: "We build intelligent solutions. AI-powered applications, blockchain integrations, and modern web experiences.",
   keywords: ["AI", "artificial intelligence", "web development", "blockchain", "Next.js", "React"],
