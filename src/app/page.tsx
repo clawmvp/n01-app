@@ -1,65 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import ThemeToggle from "@/components/ThemeToggle";
+import Navbar from "@/components/Navbar";
+import VideoHero from "@/components/VideoHero";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-foreground/5">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            n01<span className="text-accent">.app</span>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="#services" className="hidden sm:block text-sm text-muted hover:text-foreground transition-colors">
-              Services
-            </Link>
-            <Link href="#work" className="hidden sm:block text-sm text-muted hover:text-foreground transition-colors">
-              Work
-            </Link>
-            <ThemeToggle />
-            <Link 
-              href="#contact" 
-              className="text-sm px-4 py-2 bg-foreground text-background rounded-full hover:opacity-90 transition-opacity"
-            >
-              Contact
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* Smart Navigation */}
+      <Navbar />
 
-      {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center px-6 pt-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-full text-sm mb-8">
-            <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
-            AI-Powered Development
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-6">
-            We build
-            <br />
-            <span className="text-muted">intelligent</span> solutions
-          </h1>
-          <p className="text-lg md:text-xl text-muted max-w-2xl mx-auto mb-12 leading-relaxed">
-            From AI-powered applications to blockchain integrations, we create modern digital experiences that matter.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              href="#contact"
-              className="px-8 py-4 bg-foreground text-background rounded-full font-medium hover:opacity-90 transition-opacity"
-            >
-              Start a project
-            </Link>
-            <Link 
-              href="#work"
-              className="px-8 py-4 border border-foreground/20 rounded-full font-medium hover:border-foreground/40 transition-colors"
-            >
-              View our work
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section with Video Background */}
+      <VideoHero />
 
       {/* Services Section */}
       <section id="services" className="py-32 px-6">
