@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import VideoHero from "@/components/VideoHero";
+import ContentSection from "@/components/ContentSection";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 
@@ -207,6 +208,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Content Generation Section */}
+      <ContentSection />
 
       {/* Work Section */}
       <section id="work" className="py-32 px-6">
