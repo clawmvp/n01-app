@@ -213,7 +213,19 @@ export default function AdminPage() {
                       disabled={sendingPayment === lead.id}
                       className="flex items-center gap-2 px-4 py-2 bg-purple-600 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
                     >
-                      {sendingPayment === lead.id ? "Sending..." : "Send Payment Link"}
+                      {sendingPayment === lead.id ? "Sending..." : "💳 Stripe Link"}
+                    </button>
+
+                    {/* Crypto payment link */}
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/pay/${lead.id}`;
+                        navigator.clipboard.writeText(url);
+                        alert(`Crypto payment link copied!\n\n${url}`);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 rounded-xl text-sm font-medium hover:bg-orange-700 transition"
+                    >
+                      🪙 Copy Crypto Link
                     </button>
 
                     {/* Status dropdown */}
