@@ -126,11 +126,22 @@ const PACKAGE_PRICES: Record<string, { price: number; name: string }> = {
   custom: { price: 133, name: "Custom" }, // Default to Pro pricing
 };
 
+// Track recently sent payment links to prevent duplicates (in-memory, resets on deploy)
+const recentPaymentLinks = new Map<string, number>();
+const PAYMENT_LINK_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+
 // Send payment link to customer
 async function sendPaymentLink(leadInfo: any, packageName: string): Promise<boolean> {
   if (!leadInfo?.email) {
     console.log("Cannot send payment link: no email");
     return false;
+  }
+
+  // Check for recent payment link to this email
+  const lastSent = recentPaymentLinks.get(leadInfo.email);
+  if (lastSent && Date.now() - lastSent < PAYMENT_LINK_COOLDOWN) {
+    console.log(`Payment link already sent to ${leadInfo.email} recently, skipping`);
+    return true; // Return true to not show error to user
   }
 
   const pkgKey = packageName.toLowerCase();
@@ -225,6 +236,9 @@ async function sendPaymentLink(leadInfo: any, packageName: string): Promise<bool
       `,
     });
 
+    // Mark as sent to prevent duplicates
+    recentPaymentLinks.set(leadInfo.email, Date.now());
+    
     console.log("✅ Payment link sent successfully!");
     return true;
   } catch (error) {

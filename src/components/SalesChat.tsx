@@ -75,12 +75,13 @@ How can I help you today? Looking to build something?`;
     }
   }, [isOpen, messages.length]);
 
-  // Save lead when we have enough info
+  // Save lead when we have enough info (with debounce to prevent duplicates)
   useEffect(() => {
-    const saveLead = async () => {
-      if (leadSaved) return;
-      if (!leadData.email) return; // Need at least email
-      
+    if (leadSaved) return;
+    if (!leadData.email) return;
+    
+    // Debounce to prevent multiple saves
+    const timeoutId = setTimeout(async () => {
       try {
         const response = await fetch("/api/chat/lead", {
           method: "POST",
@@ -100,10 +101,10 @@ How can I help you today? Looking to build something?`;
       } catch (error) {
         console.error("Failed to save lead:", error);
       }
-    };
+    }, 1000); // Wait 1 second before saving
 
-    saveLead();
-  }, [leadData, leadSaved, messages]);
+    return () => clearTimeout(timeoutId);
+  }, [leadData.email]); // Only trigger on email change, not every message
 
   // Extract contact info from message
   const extractContactInfo = (text: string): Partial<LeadData> => {
