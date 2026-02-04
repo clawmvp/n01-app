@@ -1,36 +1,106 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Lead } from "@/lib/leads";
+import Link from "next/link";
 
-export default function AdminPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  projectDescription: string;
+  preferredContact: "whatsapp" | "email";
+  selectedPackage: string;
+  status: string;
+  paymentStatus?: string;
+  createdAt: string;
+  notes?: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+  packageType: string;
+  price: number;
+  githubRepo?: string;
+  liveUrl?: string;
+  createdAt: string;
+}
+
+type Tab = "leads" | "projects" | "settings";
+
+export default function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("leads");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sendingPayment, setSendingPayment] = useState<string | null>(null);
 
   const authenticate = () => {
-    // Simple password check - in production use proper auth
-    if (password === "n01admin2024") {
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "n01admin2024") {
       setAuthenticated(true);
       localStorage.setItem("admin_auth", "true");
-      fetchLeads();
+      fetchData();
     } else {
       setError("Invalid password");
     }
   };
 
-  const fetchLeads = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/admin/leads");
-      const data = await res.json();
-      setLeads(data.leads || []);
+      const [leadsRes, projectsRes] = await Promise.all([
+        fetch("/api/admin/leads"),
+        fetch("/api/admin/projects").catch(() => ({ json: () => ({ projects: [] }) })),
+      ]);
+      
+      const leadsData = await leadsRes.json();
+      const projectsData = await projectsRes.json();
+      
+      setLeads(leadsData.leads || []);
+      setProjects(projectsData.projects || []);
     } catch (err) {
-      console.error("Failed to fetch leads:", err);
+      console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateLeadStatus = async (leadId: string, status: string) => {
+    try {
+      await fetch("/api/admin/leads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, status }),
+      });
+      fetchData();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
+  const createProject = async (lead: Lead) => {
+    try {
+      const res = await fetch("/api/admin/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId: lead.id,
+          name: `${lead.name} - ${lead.selectedPackage}`,
+          packageType: lead.selectedPackage.toLowerCase(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Project created!");
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to create project:", err);
     }
   };
 
@@ -45,7 +115,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.success) {
         alert(`Payment link sent to ${lead.email}!`);
-        fetchLeads();
+        fetchData();
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -57,41 +127,32 @@ export default function AdminPage() {
     }
   };
 
-  const updateStatus = async (leadId: string, status: Lead["status"]) => {
-    try {
-      await fetch("/api/admin/leads", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, status }),
-      });
-      fetchLeads();
-    } catch (err) {
-      console.error("Failed to update status:", err);
-    }
-  };
-
   useEffect(() => {
     if (localStorage.getItem("admin_auth") === "true") {
       setAuthenticated(true);
-      fetchLeads();
+      fetchData();
     } else {
       setLoading(false);
     }
   }, []);
 
+  // Login screen
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-6">Admin Login</h1>
-          {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        <div className="bg-gray-900 p-8 rounded-2xl max-w-md w-full border border-gray-800">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">n01.app Admin</h1>
+            <p className="text-gray-400 text-sm mt-2">Project Management Dashboard</p>
+          </div>
+          {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && authenticate()}
             placeholder="Enter admin password"
-            className="w-full px-4 py-3 bg-gray-700 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 bg-gray-800 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700"
           />
           <button
             onClick={authenticate}
@@ -106,146 +167,288 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
+  const stats = {
+    totalLeads: leads.length,
+    newLeads: leads.filter(l => l.status === "new").length,
+    paidLeads: leads.filter(l => l.status === "paid" || l.paymentStatus === "upfront_paid").length,
+    activeProjects: projects.filter(p => p.status === "IN_PROGRESS").length,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">n01.app Admin</h1>
+    <div className="min-h-screen bg-gray-950 text-white">
+      {/* Header */}
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-gray-400">{leads.length} leads</span>
+            <Link href="/" className="text-xl font-bold">
+              n01<span className="text-blue-500">.app</span>
+            </Link>
+            <span className="text-gray-500">/ Admin</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={fetchData} className="text-gray-400 hover:text-white transition">
+              ↻ Refresh
+            </button>
             <button
               onClick={() => {
                 localStorage.removeItem("admin_auth");
                 setAuthenticated(false);
               }}
-              className="text-sm text-gray-400 hover:text-white"
+              className="text-gray-400 hover:text-white transition"
             >
               Logout
             </button>
           </div>
         </div>
+      </header>
 
-        {leads.length === 0 ? (
-          <div className="bg-gray-800 rounded-2xl p-12 text-center">
-            <p className="text-gray-400">No leads yet. They will appear here when someone submits a form.</p>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-blue-500">{stats.totalLeads}</div>
+            <div className="text-gray-400 text-sm mt-1">Total Leads</div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {leads.map((lead) => (
-              <div key={lead.id} className="bg-gray-800 rounded-2xl p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h2 className="text-xl font-semibold">{lead.name}</h2>
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          lead.status === "new"
-                            ? "bg-green-500/20 text-green-400"
-                            : lead.status === "contacted"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : lead.status === "paid"
-                            ? "bg-purple-500/20 text-purple-400"
-                            : "bg-gray-500/20 text-gray-400"
-                        }`}
-                      >
-                        {lead.status}
-                      </span>
-                      <span className="px-2 py-1 text-xs bg-gray-700 rounded-full">
-                        {lead.selectedPackage}
-                      </span>
-                    </div>
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-green-500">{stats.newLeads}</div>
+            <div className="text-gray-400 text-sm mt-1">New Leads</div>
+          </div>
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-purple-500">{stats.paidLeads}</div>
+            <div className="text-gray-400 text-sm mt-1">Paid</div>
+          </div>
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-orange-500">{stats.activeProjects}</div>
+            <div className="text-gray-400 text-sm mt-1">Active Projects</div>
+          </div>
+        </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                      <div>
-                        <span className="text-gray-400">Email:</span>{" "}
-                        <a href={`mailto:${lead.email}`} className="text-blue-400 hover:underline">
-                          {lead.email}
-                        </a>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Phone:</span>{" "}
-                        <span>{lead.phone}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Contact via:</span>{" "}
-                        <span className={lead.preferredContact === "whatsapp" ? "text-green-400" : ""}>
-                          {lead.preferredContact}
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-xl w-fit">
+          {(["leads", "projects", "settings"] as Tab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-2 rounded-lg font-medium transition ${
+                activeTab === tab
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Leads Tab */}
+        {activeTab === "leads" && (
+          <div className="space-y-4">
+            {leads.length === 0 ? (
+              <div className="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+                <p className="text-gray-400">No leads yet. They will appear here when someone submits a form.</p>
+              </div>
+            ) : (
+              leads.map((lead) => (
+                <div key={lead.id} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <h2 className="text-xl font-semibold">{lead.name}</h2>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          lead.status === "new" ? "bg-green-500/20 text-green-400" :
+                          lead.status === "contacted" ? "bg-blue-500/20 text-blue-400" :
+                          lead.status === "paid" ? "bg-purple-500/20 text-purple-400" :
+                          lead.status === "in_progress" ? "bg-orange-500/20 text-orange-400" :
+                          "bg-gray-500/20 text-gray-400"
+                        }`}>
+                          {lead.status}
+                        </span>
+                        <span className="px-2 py-1 text-xs bg-gray-800 rounded-full">
+                          {lead.selectedPackage}
                         </span>
                       </div>
-                      <div>
-                        <span className="text-gray-400">Date:</span>{" "}
-                        <span>{new Date(lead.createdAt).toLocaleString()}</span>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+                        <div>
+                          <span className="text-gray-500">Email: </span>
+                          <a href={`mailto:${lead.email}`} className="text-blue-400 hover:underline">
+                            {lead.email}
+                          </a>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Phone: </span>
+                          <span>{lead.phone}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Contact via: </span>
+                          <span className={lead.preferredContact === "whatsapp" ? "text-green-400" : ""}>
+                            {lead.preferredContact}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Date: </span>
+                          <span>{new Date(lead.createdAt).toLocaleString()}</span>
+                        </div>
                       </div>
+
+                      {lead.projectDescription && (
+                        <div className="bg-gray-800/50 p-4 rounded-xl text-sm text-gray-300">
+                          {lead.projectDescription}
+                        </div>
+                      )}
                     </div>
 
-                    {lead.projectDescription && (
-                      <div className="bg-gray-700/50 p-4 rounded-xl mb-4">
-                        <p className="text-sm text-gray-300">{lead.projectDescription}</p>
-                      </div>
-                    )}
-                  </div>
+                    <div className="flex flex-wrap lg:flex-col gap-2">
+                      <a
+                        href={`https://wa.me/${lead.phone.replace(/[\s\-\(\)\+]/g, "")}?text=${encodeURIComponent(
+                          `Hi ${lead.name}! This is the n01.app team. Thanks for your interest!`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700 transition"
+                      >
+                        📱 WhatsApp
+                      </a>
+                      
+                      <button
+                        onClick={() => sendPaymentLink(lead)}
+                        disabled={sendingPayment === lead.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
+                      >
+                        {sendingPayment === lead.id ? "Sending..." : "💳 Payment Link"}
+                      </button>
 
-                  <div className="flex flex-col gap-2">
-                    {/* WhatsApp button */}
-                    <a
-                      href={`https://wa.me/${lead.phone.replace(/[\s\-\(\)\+]/g, "")}?text=${encodeURIComponent(
-                        `Hi ${lead.name}! This is the n01.app team. Thanks for your interest in our ${lead.selectedPackage} package. I'd love to discuss your project!`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700 transition"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                      </svg>
-                      WhatsApp
-                    </a>
+                      {lead.status === "paid" && (
+                        <button
+                          onClick={() => createProject(lead)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
+                        >
+                          🚀 Create Project
+                        </button>
+                      )}
 
-                    {/* Send payment link */}
-                    <button
-                      onClick={() => sendPaymentLink(lead)}
-                      disabled={sendingPayment === lead.id}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
-                    >
-                      {sendingPayment === lead.id ? "Sending..." : "💳 Stripe Link"}
-                    </button>
-
-                    {/* Crypto payment link */}
-                    <button
-                      onClick={() => {
-                        const url = `${window.location.origin}/pay/${lead.id}`;
-                        navigator.clipboard.writeText(url);
-                        alert(`Crypto payment link copied!\n\n${url}`);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 rounded-xl text-sm font-medium hover:bg-orange-700 transition"
-                    >
-                      🪙 Copy Crypto Link
-                    </button>
-
-                    {/* Status dropdown */}
-                    <select
-                      value={lead.status}
-                      onChange={(e) => updateStatus(lead.id, e.target.value as Lead["status"])}
-                      className="px-4 py-2 bg-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="new">New</option>
-                      <option value="contacted">Contacted</option>
-                      <option value="quoted">Quoted</option>
-                      <option value="paid">Paid</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                      <select
+                        value={lead.status}
+                        onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                        className="px-4 py-2 bg-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700"
+                      >
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="paid">Paid</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Projects Tab */}
+        {activeTab === "projects" && (
+          <div className="space-y-4">
+            {projects.length === 0 ? (
+              <div className="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+                <p className="text-gray-400">No projects yet. Create one from a paid lead.</p>
+                <p className="text-gray-500 text-sm mt-2">Projects will be managed here with delivery tracking.</p>
               </div>
-            ))}
+            ) : (
+              projects.map((project) => (
+                <div key={project.id} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">{project.name}</h3>
+                      <div className="flex gap-2 mt-2">
+                        <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
+                          {project.packageType}
+                        </span>
+                        <span className="px-2 py-1 text-xs bg-gray-700 rounded-full">
+                          ${project.price}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        project.status === "IN_PROGRESS" ? "bg-orange-500/20 text-orange-400" :
+                        project.status === "COMPLETED" ? "bg-green-500/20 text-green-400" :
+                        "bg-gray-700 text-gray-400"
+                      }`}>
+                        {project.status.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                  {(project.githubRepo || project.liveUrl) && (
+                    <div className="mt-4 flex gap-4 text-sm">
+                      {project.githubRepo && (
+                        <a href={project.githubRepo} target="_blank" className="text-blue-400 hover:underline">
+                          📦 GitHub
+                        </a>
+                      )}
+                      {project.liveUrl && (
+                        <a href={project.liveUrl} target="_blank" className="text-green-400 hover:underline">
+                          🌐 Live Site
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+            <h2 className="text-xl font-semibold mb-6">Settings</h2>
+            
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-medium mb-2">Database Status</h3>
+                <p className="text-gray-400 text-sm">
+                  {process.env.DATABASE_URL ? (
+                    <span className="text-green-400">✓ Database connected</span>
+                  ) : (
+                    <span className="text-yellow-400">⚠ Using in-memory storage (data resets on deploy)</span>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Setup Database</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  For persistent storage, add a PostgreSQL database:
+                </p>
+                <ol className="text-sm text-gray-400 list-decimal list-inside space-y-2">
+                  <li>Create a free database at <a href="https://supabase.com" target="_blank" className="text-blue-400">Supabase</a> or <a href="https://neon.tech" target="_blank" className="text-blue-400">Neon</a></li>
+                  <li>Copy the connection string</li>
+                  <li>Add to Vercel: <code className="bg-gray-800 px-2 py-1 rounded">DATABASE_URL=your_connection_string</code></li>
+                  <li>Run migrations: <code className="bg-gray-800 px-2 py-1 rounded">npx prisma db push</code></li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Quick Links</h3>
+                <div className="flex gap-4">
+                  <a href="https://github.com/clawmvp/n01-app" target="_blank" className="text-blue-400 hover:underline text-sm">
+                    GitHub Repo
+                  </a>
+                  <a href="https://vercel.com/clawmvps-projects/n01-app" target="_blank" className="text-blue-400 hover:underline text-sm">
+                    Vercel Dashboard
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

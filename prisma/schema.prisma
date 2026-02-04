@@ -1,0 +1,204 @@
+// n01.app Database Schema
+// Using PostgreSQL (Supabase, Neon, or any PostgreSQL provider)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Lead - Initial contact from potential client
+model Lead {
+  id                String   @id @default(cuid())
+  name              String
+  email             String
+  phone             String
+  projectDescription String? @db.Text
+  preferredContact  String   @default("whatsapp") // whatsapp, email
+  selectedPackage   String   @default("custom")
+  source            String?  // website, chatbot, referral
+  
+  status            LeadStatus @default(NEW)
+  paymentStatus     PaymentStatus @default(PENDING)
+  
+  stripeSessionId   String?
+  cryptoTxHash      String?
+  cryptoNetwork     String?  // solana, ethereum
+  
+  notes             String?  @db.Text
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  project           Project?
+  messages          Message[]
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  PAID
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  UPFRONT_PAID
+  FULLY_PAID
+  REFUNDED
+}
+
+// Project - Active development project
+model Project {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?  @db.Text
+  
+  // Package info
+  packageType     String   // starter, pro, scale, custom
+  price           Float
+  upfrontPaid     Float    @default(0)
+  finalPaid       Float    @default(0)
+  
+  // Delivery info
+  githubRepo      String?
+  vercelProject   String?
+  liveUrl         String?
+  customDomain    String?
+  
+  // Timeline
+  startedAt       DateTime?
+  estimatedDelivery DateTime?
+  deliveredAt     DateTime?
+  completedAt     DateTime?
+  
+  // Revisions
+  revisionsUsed   Int      @default(0)
+  revisionsTotal  Int      @default(5)
+  
+  status          ProjectStatus @default(PENDING)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  leadId          String   @unique
+  lead            Lead     @relation(fields: [leadId], references: [id])
+  deliveries      Delivery[]
+  tasks           Task[]
+}
+
+enum ProjectStatus {
+  PENDING       // Waiting for payment
+  PLANNING      // NOVA is planning
+  IN_PROGRESS   // Team is building
+  REVIEW        // Client reviewing
+  REVISIONS     // Making changes
+  DELIVERED     // Sent to client
+  COMPLETED     // Client approved
+  CANCELLED
+}
+
+// Delivery - Project deliverables
+model Delivery {
+  id          String   @id @default(cuid())
+  
+  type        DeliveryType
+  title       String
+  description String?
+  
+  // File/Link info
+  url         String?
+  fileName    String?
+  fileSize    Int?
+  
+  // Status
+  sentAt      DateTime?
+  viewedAt    DateTime?
+  acceptedAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+}
+
+enum DeliveryType {
+  GITHUB_REPO
+  VERCEL_DEPLOYMENT
+  PREVIEW_LINK
+  SOURCE_CODE_ZIP
+  DOCUMENTATION
+  CREDENTIALS
+  FINAL_DELIVERY
+}
+
+// Task - Internal project tasks
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  
+  agent       String   // NOVA, PIXEL, NEXUS, etc.
+  priority    Int      @default(0)
+  
+  status      TaskStatus @default(PENDING)
+  
+  startedAt   DateTime?
+  completedAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+// Message - Communication history
+model Message {
+  id        String   @id @default(cuid())
+  
+  direction String   // inbound, outbound
+  channel   String   // email, whatsapp, chat
+  
+  subject   String?
+  content   String   @db.Text
+  
+  sentAt    DateTime @default(now())
+  readAt    DateTime?
+  
+  // Relations
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+}
+
+// Settings - App configuration
+model Settings {
+  id        String   @id @default("default")
+  
+  // Notifications
+  notifyEmail     String?
+  notifyWhatsapp  String?
+  
+  // Defaults
+  defaultRevisions Int @default(5)
+  
+  updatedAt DateTime @updatedAt
+}

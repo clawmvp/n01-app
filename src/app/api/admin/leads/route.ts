@@ -1,26 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllLeads, updateLead, Lead } from "@/lib/leads";
+import { getAllLeads, updateLead, deleteLead, Lead } from "@/lib/leads";
 
 export async function GET() {
-  const leads = getAllLeads();
-  return NextResponse.json({ leads });
+  try {
+    const leads = await getAllLeads();
+    return NextResponse.json({ leads });
+  } catch (error) {
+    console.error("Get leads error:", error);
+    return NextResponse.json({ leads: [] });
+  }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { leadId, status, notes } = body;
+    const { leadId, ...updates } = body;
 
     if (!leadId) {
       return NextResponse.json({ error: "Lead ID required" }, { status: 400 });
     }
 
-    const updates: Partial<Lead> = {};
-    if (status) updates.status = status;
-    if (notes !== undefined) updates.notes = notes;
+    const updated = await updateLead(leadId, updates as Partial<Lead>);
 
-    const updated = updateLead(leadId, updates);
-    
     if (!updated) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
@@ -29,5 +30,27 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Admin leads API error:", error);
     return NextResponse.json({ error: "Failed to update lead" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const leadId = searchParams.get("id");
+
+    if (!leadId) {
+      return NextResponse.json({ error: "Lead ID required" }, { status: 400 });
+    }
+
+    const deleted = await deleteLead(leadId);
+
+    if (!deleted) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete lead error:", error);
+    return NextResponse.json({ error: "Failed to delete lead" }, { status: 500 });
   }
 }

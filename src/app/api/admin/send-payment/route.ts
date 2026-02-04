@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Lead ID required" }, { status: 400 });
     }
 
-    const lead = getLead(leadId);
+    const lead = await getLead(leadId);
     if (!lead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Update lead status
-          updateLead(leadId, { status: "quoted" });
+          await updateLead(leadId, { status: "quoted" });
 
           return NextResponse.json({
             success: true,
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update lead
-    updateLead(leadId, {
+    await updateLead(leadId, {
       status: "quoted",
       stripeSessionId: session.id,
     });

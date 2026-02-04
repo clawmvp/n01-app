@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
 
       // Update lead status
       if (leadId) {
-        const lead = getLead(leadId);
+        const lead = await getLead(leadId);
         if (lead) {
-          updateLead(leadId, {
+          await updateLead(leadId, {
             status: "paid",
             paymentStatus: paymentType === "upfront" ? "upfront_paid" : "fully_paid",
           });

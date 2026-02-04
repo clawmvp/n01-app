@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lead = getLead(leadId);
+    const lead = await getLead(leadId);
     if (!lead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     if (result.verified) {
       // Update lead status
-      updateLead(leadId, {
+      await updateLead(leadId, {
         status: "paid",
         paymentStatus: "upfront_paid",
         notes: `Crypto payment verified: ${network} tx ${txHash}`,
