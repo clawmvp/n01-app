@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isDatabaseConfigured } from "@/lib/db";
 import { getLead, updateLead } from "@/lib/leads";
 import { packages } from "@/lib/pricing";
 
-// In-memory fallback for projects
+// In-memory project storage
 const projectsStore: Map<string, any> = new Map();
 
 export async function GET() {
   try {
-    if (isDatabaseConfigured()) {
-      const projects = await prisma.project.findMany({
-        orderBy: { createdAt: "desc" },
-        include: { lead: true },
-      });
-      return NextResponse.json({ projects });
-    }
-    
-    // Fallback to memory
     return NextResponse.json({ 
-      projects: Array.from(projectsStore.values()) 
+      projects: Array.from(projectsStore.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
     });
   } catch (error) {
     console.error("Get projects error:", error);
@@ -42,8 +34,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine price
-    const pkg = packages.find(p => p.id === packageType || p.name.toLowerCase() === packageType);
+    const pkg = packages.find(p => p.id === packageType || p.name.toLowerCase() === packageType?.toLowerCase());
     const price = customPrice || pkg?.price || 133;
+    const deliveryDays = pkg?.delivery?.includes("48") ? 2 : pkg?.delivery?.includes("5") ? 5 : 10;
 
     const projectId = `P-${Date.now().toString(36).toUpperCase()}`;
     
@@ -54,26 +47,10 @@ export async function POST(request: NextRequest) {
       price,
       status: "PLANNING",
       leadId,
-      createdAt: new Date(),
-      estimatedDelivery: new Date(Date.now() + (pkg?.delivery?.includes("48") ? 2 : pkg?.delivery?.includes("5") ? 5 : 10) * 24 * 60 * 60 * 1000),
+      createdAt: new Date().toISOString(),
+      estimatedDelivery: new Date(Date.now() + deliveryDays * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    if (isDatabaseConfigured()) {
-      try {
-        const project = await prisma.project.create({
-          data: projectData as any,
-        });
-        
-        // Update lead status
-        await updateLead(leadId, { status: "in_progress" });
-        
-        return NextResponse.json({ success: true, project });
-      } catch (dbError) {
-        console.error("Database error:", dbError);
-      }
-    }
-
-    // Fallback to memory
     projectsStore.set(projectId, projectData);
     await updateLead(leadId, { status: "in_progress" });
 
@@ -93,19 +70,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    if (isDatabaseConfigured()) {
-      try {
-        const project = await prisma.project.update({
-          where: { id: projectId },
-          data: updates,
-        });
-        return NextResponse.json({ success: true, project });
-      } catch (dbError) {
-        console.error("Database error:", dbError);
-      }
-    }
-
-    // Fallback to memory
     const project = projectsStore.get(projectId);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });

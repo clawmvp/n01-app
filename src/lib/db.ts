@@ -1,17 +1,49 @@
-import { PrismaClient } from "@prisma/client";
+// Database client with graceful fallback
 
-// Prevent multiple instances of Prisma Client in development
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+let prismaClient: any = null;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+// Try to import Prisma client
+async function initPrisma() {
+  if (prismaClient) return prismaClient;
+  
+  if (!process.env.DATABASE_URL) {
+    console.log("DATABASE_URL not configured, using in-memory storage");
+    return null;
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    prismaClient = new PrismaClient();
+    return prismaClient;
+  } catch (error) {
+    console.error("Failed to initialize Prisma:", error);
+    return null;
+  }
 }
 
-// Check if database is configured
+// Lazy getter for prisma client
+export async function getPrisma() {
+  return await initPrisma();
+}
+
+// Sync check for database configuration
 export function isDatabaseConfigured(): boolean {
   return !!process.env.DATABASE_URL;
 }
+
+// Export a proxy that works like the old prisma export
+export const prisma = new Proxy({} as any, {
+  get(target, prop) {
+    return async (...args: any[]) => {
+      const client = await getPrisma();
+      if (!client) {
+        throw new Error("Database not configured");
+      }
+      const model = (client as any)[prop];
+      if (typeof model === "function") {
+        return model.call(client, ...args);
+      }
+      return model;
+    };
+  },
+});

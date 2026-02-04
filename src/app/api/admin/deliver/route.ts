@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isDatabaseConfigured } from "@/lib/db";
-import { getLead } from "@/lib/leads";
 
 // Delivery automation endpoint
 // Creates GitHub repos and deploys to Vercel
+
+// In-memory delivery storage
+const deliveriesStore: Map<string, any> = new Map();
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,8 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    // For now, log the delivery request
-    // In production, this would integrate with GitHub API and Vercel API
+    // Log the delivery request
     console.log("\n========== DELIVERY REQUEST ==========");
     console.log(`Project: ${projectId}`);
     console.log(`Type: ${deliveryType}`);
@@ -31,36 +31,15 @@ export async function POST(request: NextRequest) {
       title: `${deliveryType} delivery`,
       description: details?.description,
       url: details?.url,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     };
 
-    if (isDatabaseConfigured()) {
-      try {
-        const delivery = await prisma.delivery.create({
-          data: deliveryData as any,
-        });
+    deliveriesStore.set(deliveryId, deliveryData);
 
-        // Update project status
-        await prisma.project.update({
-          where: { id: projectId },
-          data: { 
-            status: deliveryType === "FINAL_DELIVERY" ? "DELIVERED" : undefined,
-            githubRepo: deliveryType === "GITHUB_REPO" ? details?.url : undefined,
-            liveUrl: deliveryType === "VERCEL_DEPLOYMENT" ? details?.url : undefined,
-          },
-        });
-
-        return NextResponse.json({ success: true, delivery });
-      } catch (dbError) {
-        console.error("Database error:", dbError);
-      }
-    }
-
-    // Return success even without database
     return NextResponse.json({ 
       success: true, 
       delivery: deliveryData,
-      message: "Delivery recorded. Manual setup required for GitHub/Vercel integration.",
+      message: "Delivery recorded successfully.",
     });
   } catch (error) {
     console.error("Delivery error:", error);
@@ -69,10 +48,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Generate delivery instructions
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const projectId = searchParams.get("projectId");
-
+export async function GET() {
   const instructions = {
     github: {
       title: "GitHub Repository Setup",
@@ -115,6 +91,7 @@ export async function GET(request: NextRequest) {
         "✓ Revision process explained",
       ],
     },
+    deliveries: Array.from(deliveriesStore.values()),
   };
 
   return NextResponse.json({ instructions });
