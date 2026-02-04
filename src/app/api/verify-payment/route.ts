@@ -6,7 +6,7 @@ import { createProjectFromLead, getProjectProgress } from "@/lib/automation";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { leadId, network, txHash, amount, email } = body;
+    const { leadId, network, txHash, amount, email, packageName } = body;
 
     if (!network || !txHash) {
       return NextResponse.json(
@@ -36,15 +36,16 @@ export async function POST(request: NextRequest) {
     if (result.verified) {
       // If no lead exists, create one
       if (!lead && email) {
-        const newLeadId = `L-${Date.now().toString(36).toUpperCase()}`;
+        const newLeadId = leadId?.startsWith("N01-") ? leadId : `L-${Date.now().toString(36).toUpperCase()}`;
+        const pkg = packageName || "Custom";
         const newLead: Lead = {
           id: newLeadId,
           name: email.split("@")[0],
           email,
           phone: "",
-          projectDescription: `Crypto payment: $${amount} USDC on ${network}`,
+          projectDescription: `${pkg} package - Crypto payment: $${amount} USDC on ${network}`,
           preferredContact: "email",
-          selectedPackage: "custom",
+          selectedPackage: pkg,
           source: "crypto-direct",
           createdAt: new Date().toISOString(),
           status: "paid",
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         };
         await saveLead(newLead);
         lead = newLead;
+        console.log(`✅ New lead created: ${newLeadId}`);
       } else if (lead) {
         // Update existing lead
         await updateLead(lead.id, {
