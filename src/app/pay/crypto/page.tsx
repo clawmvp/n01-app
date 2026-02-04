@@ -33,29 +33,30 @@ function CryptoPaymentContent() {
     setVerifying(true);
 
     try {
-      // For now, just simulate verification
-      // In production, this would call the verify-payment API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Send notification email
-      await fetch("/api/chat/lead", {
+      // Call verification API
+      const res = await fetch("/api/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          leadId: `CRYPTO-${Date.now()}`,
+          network: selectedNetwork,
+          txHash,
+          amount: discountedAmount,
           email,
-          name: email.split("@")[0],
-          service: "Crypto Payment",
-          package: packageName,
-          source: "crypto-payment",
-          conversation: `Crypto payment of $${discountedAmount} USDC on ${selectedNetwork}\nTX: ${txHash}`,
         }),
       });
 
-      setVerified(true);
+      const data = await res.json();
+
+      if (data.verified) {
+        setVerified(true);
+      } else {
+        // Payment not found yet - show pending state
+        alert(data.error || "Transaction not found or still pending. Please check the hash and try again in a few minutes.");
+      }
     } catch (error) {
       console.error("Verification error:", error);
-      alert("Payment recorded. We'll verify and confirm shortly!");
-      setVerified(true);
+      alert("Could not verify payment. Please try again or contact support.");
     } finally {
       setVerifying(false);
     }

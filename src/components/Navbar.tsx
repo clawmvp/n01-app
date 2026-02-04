@@ -28,20 +28,18 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link 
           href="/" 
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 group"
         >
-          <Image 
-            src="/logo.png" 
-            alt="n01.app" 
-            width={36} 
-            height={36} 
-            className="rounded-lg"
-          />
-          <span className={`text-xl font-semibold tracking-tight transition-colors ${
-            scrolled ? "text-foreground" : "text-white"
-          }`}>
-            n01<span className="text-accent">.app</span>
-          </span>
+          <div className="relative">
+            <Image 
+              src="/logo.png" 
+              alt="n01.app" 
+              width={42} 
+              height={42} 
+              className="rounded-xl transition-transform group-hover:scale-105"
+            />
+            <div className="absolute inset-0 rounded-xl bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </Link>
         
         <div className="flex items-center gap-6">
