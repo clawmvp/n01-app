@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 
 interface Message {
   id: string;
@@ -235,10 +236,10 @@ How can I help you today? Looking to build something?`;
           setIsOpen(!isOpen);
           setShowNotification(false);
         }}
-        className={`fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 ${
+        className={`fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 overflow-hidden ${
           isOpen
-            ? "bg-gray-700 rotate-0"
-            : "bg-gradient-to-br from-accent to-purple-600"
+            ? "bg-gray-700"
+            : "bg-gradient-to-br from-pink-500 to-purple-600 ring-4 ring-white/20"
         }`}
       >
         {isOpen ? (
@@ -246,7 +247,13 @@ How can I help you today? Looking to build something?`;
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
-          <span className="text-2xl">🤖</span>
+          <Image
+            src="/team/avatar-aria.png"
+            alt="ARIA"
+            width={64}
+            height={64}
+            className="w-full h-full object-cover"
+          />
         )}
       </button>
 
@@ -254,9 +261,11 @@ How can I help you today? Looking to build something?`;
       {showNotification && !isOpen && (
         <div className="fixed bottom-24 right-6 z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 max-w-[280px] border border-gray-200 dark:border-gray-700 animate-bounce">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">👋</span>
+            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              <Image src="/team/avatar-aria.png" alt="ARIA" width={40} height={40} className="w-full h-full object-cover" />
+            </div>
             <div>
-              <p className="text-sm font-medium">Hey! I&apos;m ARIA</p>
+              <p className="text-sm font-medium">Hey! I&apos;m ARIA 👋</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Need a website, app, logo, or content? Let&apos;s chat!
               </p>
@@ -278,13 +287,13 @@ How can I help you today? Looking to build something?`;
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 w-[380px] h-[550px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
           {/* Header */}
-          <div className="bg-gradient-to-r from-accent to-purple-600 text-white p-4 flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
-              🤖
+          <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-4 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/30">
+              <Image src="/team/avatar-aria.png" alt="ARIA" width={48} height={48} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold">ARIA</h3>
-              <p className="text-xs text-white/80">AI Sales Agent • n01.app Team</p>
+              <p className="text-xs text-white/80">AI Assistant • Powered by GPT-4</p>
             </div>
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
