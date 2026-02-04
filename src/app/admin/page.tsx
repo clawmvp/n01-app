@@ -17,6 +17,13 @@ interface Lead {
   notes?: string;
 }
 
+interface ProjectTask {
+  id: string;
+  agent: string;
+  title: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
 interface Project {
   id: string;
   name: string;
@@ -24,8 +31,14 @@ interface Project {
   packageType: string;
   price: number;
   githubRepo?: string;
-  liveUrl?: string;
+  vercelUrl?: string;
+  previewUrl?: string;
   createdAt: string;
+  estimatedDelivery?: string;
+  currentAgent?: string;
+  tasks: ProjectTask[];
+  clientEmail: string;
+  clientName: string;
 }
 
 type Tab = "leads" | "projects" | "settings";
@@ -359,50 +372,152 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {projects.length === 0 ? (
               <div className="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
-                <p className="text-gray-400">No projects yet. Create one from a paid lead.</p>
-                <p className="text-gray-500 text-sm mt-2">Projects will be managed here with delivery tracking.</p>
+                <p className="text-gray-400">No projects yet.</p>
+                <p className="text-gray-500 text-sm mt-2">Projects are auto-created when payments are confirmed.</p>
               </div>
             ) : (
-              projects.map((project) => (
-                <div key={project.id} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{project.name}</h3>
-                      <div className="flex gap-2 mt-2">
-                        <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
-                          {project.packageType}
-                        </span>
-                        <span className="px-2 py-1 text-xs bg-gray-700 rounded-full">
-                          ${project.price}
-                        </span>
+              projects.map((project) => {
+                const completedTasks = project.tasks?.filter((t: ProjectTask) => t.status === "completed").length || 0;
+                const totalTasks = project.tasks?.length || 1;
+                const progress = Math.round((completedTasks / totalTasks) * 100);
+                
+                return (
+                  <div key={project.id} className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+                    {/* Header */}
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold">{project.name}</h3>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            project.status === "planning" ? "bg-blue-500/20 text-blue-400" :
+                            project.status === "designing" ? "bg-purple-500/20 text-purple-400" :
+                            project.status === "developing" ? "bg-orange-500/20 text-orange-400" :
+                            project.status === "delivered" ? "bg-teal-500/20 text-teal-400" :
+                            project.status === "completed" ? "bg-green-500/20 text-green-400" :
+                            "bg-gray-700 text-gray-400"
+                          }`}>
+                            {project.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-sm text-gray-400">
+                          <span>📧 {project.clientEmail}</span>
+                          <span>•</span>
+                          <span>💰 ${project.price}</span>
+                          <span>•</span>
+                          <span>📦 {project.packageType}</span>
+                          {project.estimatedDelivery && (
+                            <>
+                              <span>•</span>
+                              <span>📅 Due: {new Date(project.estimatedDelivery).toLocaleDateString()}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <a
+                          href={`/project/${project.id}`}
+                          target="_blank"
+                          className="px-3 py-2 bg-gray-800 rounded-lg text-sm hover:bg-gray-700 transition"
+                        >
+                          👀 Client View
+                        </a>
+                        <button
+                          onClick={async () => {
+                            await fetch("/api/admin/projects", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ projectId: project.id, action: "advance" }),
+                            });
+                            fetchData();
+                          }}
+                          className="px-3 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-700 transition"
+                        >
+                          ⏭ Advance Task
+                        </button>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full text-sm ${
-                        project.status === "IN_PROGRESS" ? "bg-orange-500/20 text-orange-400" :
-                        project.status === "COMPLETED" ? "bg-green-500/20 text-green-400" :
-                        "bg-gray-700 text-gray-400"
-                      }`}>
-                        {project.status.replace("_", " ")}
-                      </span>
+
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-400">Progress</span>
+                        <span className="font-medium">{progress}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Current Agent */}
+                    {project.currentAgent && (
+                      <div className="flex items-center gap-2 mb-4 p-3 bg-gray-800/50 rounded-lg">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-sm">
+                          <strong>{project.currentAgent}</strong> is currently working
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Tasks */}
+                    {project.tasks && (
+                      <div className="space-y-2">
+                        {project.tasks.map((task: ProjectTask, idx: number) => (
+                          <div 
+                            key={task.id}
+                            className={`flex items-center gap-3 p-2 rounded-lg ${
+                              task.status === "completed" ? "bg-green-500/10" :
+                              task.status === "in_progress" ? "bg-blue-500/10" :
+                              "bg-gray-800/30"
+                            }`}
+                          >
+                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
+                              task.status === "completed" ? "bg-green-500 text-white" :
+                              task.status === "in_progress" ? "bg-blue-500 text-white" :
+                              "bg-gray-700 text-gray-400"
+                            }`}>
+                              {task.status === "completed" ? "✓" : idx + 1}
+                            </span>
+                            <span className={`flex-1 text-sm ${task.status === "pending" ? "text-gray-500" : ""}`}>
+                              {task.title}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              task.status === "completed" ? "text-green-400" :
+                              task.status === "in_progress" ? "text-blue-400" :
+                              "text-gray-500"
+                            }`}>
+                              {task.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Links */}
+                    {(project.githubRepo || project.vercelUrl || project.previewUrl) && (
+                      <div className="mt-4 pt-4 border-t border-gray-800 flex gap-4 text-sm">
+                        {project.previewUrl && (
+                          <a href={project.previewUrl} target="_blank" className="text-cyan-400 hover:underline">
+                            👀 Preview
+                          </a>
+                        )}
+                        {project.vercelUrl && (
+                          <a href={project.vercelUrl} target="_blank" className="text-green-400 hover:underline">
+                            🌐 Live
+                          </a>
+                        )}
+                        {project.githubRepo && (
+                          <a href={project.githubRepo} target="_blank" className="text-blue-400 hover:underline">
+                            📦 GitHub
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {(project.githubRepo || project.liveUrl) && (
-                    <div className="mt-4 flex gap-4 text-sm">
-                      {project.githubRepo && (
-                        <a href={project.githubRepo} target="_blank" className="text-blue-400 hover:underline">
-                          📦 GitHub
-                        </a>
-                      )}
-                      {project.liveUrl && (
-                        <a href={project.liveUrl} target="_blank" className="text-green-400 hover:underline">
-                          🌐 Live Site
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
