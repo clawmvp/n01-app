@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveLead, Lead } from "@/lib/leads";
-import { createProjectFromLead } from "@/lib/automation";
+import { saveLead, Lead, getAllLeads } from "@/lib/leads";
+import { createProjectFromLead, getAllProjects } from "@/lib/automation";
+import { kv } from "@vercel/kv";
 
 // Admin endpoint to manually add a payment
 export async function POST(request: NextRequest) {
@@ -39,7 +40,18 @@ export async function POST(request: NextRequest) {
       cryptoNetwork: network,
     };
 
+    // Save to memory + KV
     await saveLead(lead);
+    
+    // Also save directly to KV to be sure
+    try {
+      await kv.set(`lead:${leadId}`, lead);
+      await kv.sadd("lead_ids", leadId);
+      console.log(`✅ Lead saved to KV: ${leadId}`);
+    } catch (kvError) {
+      console.error("KV save error:", kvError);
+    }
+    
     console.log(`✅ Manual lead created: ${leadId}`);
 
     // Create project
@@ -50,6 +62,10 @@ export async function POST(request: NextRequest) {
     } catch (projectError) {
       console.error("Failed to create project:", projectError);
     }
+
+    // Verify save worked
+    const allLeads = await getAllLeads();
+    const allProjects = await getAllProjects();
 
     return NextResponse.json({
       success: true,
@@ -62,6 +78,11 @@ export async function POST(request: NextRequest) {
         id: project.id,
         status: project.status,
       } : null,
+      debug: {
+        totalLeads: allLeads.length,
+        totalProjects: allProjects.length,
+        kvConfigured: !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
+      },
     });
   } catch (error) {
     console.error("Add payment error:", error);
