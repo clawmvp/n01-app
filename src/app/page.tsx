@@ -189,6 +189,34 @@ export default function Home() {
               <h3 className="font-semibold text-sm">SENTINEL</h3>
               <p className="text-xs text-muted">Security</p>
             </div>
+
+            {/* ARIA - Sales */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-pink-400 transition-all">
+                <Image
+                  src="/team/avatar-aria.png"
+                  alt="ARIA"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">ARIA</h3>
+              <p className="text-xs text-muted">Sales Agent</p>
+            </div>
+
+            {/* PRISM - Marketing */}
+            <div className="group text-center">
+              <div className="relative mb-4 mx-auto w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-transparent group-hover:ring-gradient transition-all" style={{background: 'linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3)'}}>
+                <Image
+                  src="/team/avatar-prism.png"
+                  alt="PRISM"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-semibold text-sm">PRISM</h3>
+              <p className="text-xs text-muted">Marketing</p>
+            </div>
           </div>
 
           {/* Team Stats */}
@@ -198,7 +226,7 @@ export default function Home() {
               <div className="text-sm text-muted mt-2">Always Online</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-accent">7</div>
+              <div className="text-4xl font-bold text-accent">9</div>
               <div className="text-sm text-muted mt-2">Specialized Agents</div>
             </div>
             <div className="text-center">
