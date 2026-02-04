@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import GlobalChat from "@/components/GlobalChat";
+import { ToastProvider } from "@/components/Toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,8 +66,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
-        <GlobalChat />
+        <ToastProvider>
+          {children}
+          <GlobalChat />
+        </ToastProvider>
       </body>
     </html>
   );

@@ -27,11 +27,54 @@ interface LeadData {
   package?: string;
 }
 
-const getGreeting = () => {
+// Dynamic greetings - ARIA has personality!
+const getRandomGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  const day = new Date().getDay();
+  const isWeekend = day === 0 || day === 6;
+  
+  const morningGreetings = [
+    "Good morning! ☀️ Ready to build something amazing today?",
+    "Hey there! Fresh coffee and fresh ideas - let's create something great! ☕",
+    "Morning! 🌅 Early bird catches the best apps. What are we building?",
+    "Good morning! The AI team is warmed up and ready to go!",
+    "Hey! Starting the day strong? Let's make something awesome together.",
+  ];
+  
+  const afternoonGreetings = [
+    "Hey! 👋 Perfect timing - I was just thinking about cool projects.",
+    "Good afternoon! What amazing idea brings you here today?",
+    "Hi there! Ready to turn your vision into reality? 🚀",
+    "Hey! The creative juices are flowing - what shall we build?",
+    "Afternoon! Got an idea you want to bring to life? I'm all ears!",
+  ];
+  
+  const eveningGreetings = [
+    "Good evening! 🌙 Night owls make the best entrepreneurs.",
+    "Hey! Working late on your next big thing? Let's chat!",
+    "Evening! Some of the best ideas come after sunset. What's on your mind?",
+    "Hey there! Burning the midnight oil? Let's make it worth it! 💡",
+    "Good evening! The AI team works 24/7 - what can we build for you?",
+  ];
+  
+  const weekendGreetings = [
+    "Happy weekend! 🎉 Best time to work on passion projects!",
+    "Weekend vibes! Building something fun or working on a side hustle?",
+    "Hey! Love the weekend energy - what are we creating?",
+  ];
+  
+  let pool: string[];
+  if (isWeekend) {
+    pool = [...weekendGreetings, ...(hour < 12 ? morningGreetings : hour < 18 ? afternoonGreetings : eveningGreetings)];
+  } else if (hour < 12) {
+    pool = morningGreetings;
+  } else if (hour < 18) {
+    pool = afternoonGreetings;
+  } else {
+    pool = eveningGreetings;
+  }
+  
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 
 // Email regex
@@ -66,20 +109,24 @@ export default function SalesChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send initial greeting when chat opens
+  // Send initial greeting when chat opens - different every time!
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const greeting = `${getGreeting()}! 👋 I'm ARIA, the AI Sales Agent at n01.app.
-
-I work alongside our AI team - NOVA coordinates projects, PIXEL builds beautiful UIs & logos, NEXUS handles backends, and the rest of the crew.
-
-How can I help you today? Looking to build something?`;
+      const intros = [
+        `${getRandomGreeting()}\n\nI'm ARIA, and I lead an AI team that can build pretty much anything digital - apps, websites, logos, content, you name it.`,
+        `${getRandomGreeting()}\n\nI'm ARIA! I work with a crew of specialized AI agents - designers, developers, marketers - ready to bring your ideas to life.`,
+        `${getRandomGreeting()}\n\nARIA here! Think of me as your creative partner. Whatever you're dreaming up - I've got a team of AI specialists ready to make it happen.`,
+        `${getRandomGreeting()}\n\nHey, I'm ARIA! 🤖 Part AI, part project manager, 100% here to help you build something great.`,
+        `${getRandomGreeting()}\n\nI'm ARIA - imagine having a whole tech team at your fingertips. Web apps, mobile apps, branding, content... what's your vision?`,
+      ];
+      
+      const intro = intros[Math.floor(Math.random() * intros.length)];
       
       setMessages([
         {
           id: "welcome",
           role: "assistant",
-          content: greeting,
+          content: intro,
         },
       ]);
     }
