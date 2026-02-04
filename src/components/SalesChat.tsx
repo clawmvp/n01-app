@@ -3,10 +3,20 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
+interface PaymentLinks {
+  stripe: string;
+  crypto: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  paymentLinks?: {
+    starter: PaymentLinks;
+    pro: PaymentLinks;
+    scale: PaymentLinks;
+  };
 }
 
 interface LeadData {
@@ -198,13 +208,14 @@ How can I help you today? Looking to build something?`;
         console.log("Payment link sent to:", leadData.email);
       }
 
-      // Add AI response
+      // Add AI response with optional payment links
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
           content: data.response,
+          paymentLinks: data.paymentLinks,
         },
       ]);
     } catch (error) {
@@ -326,6 +337,47 @@ How can I help you today? Looking to build something?`;
                   }`}
                 >
                   <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                  
+                  {/* Payment Buttons */}
+                  {message.paymentLinks && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-xs text-gray-500 mb-2">Quick pay:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={message.paymentLinks.starter.stripe}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+                        >
+                          Starter $49
+                        </a>
+                        <a
+                          href={message.paymentLinks.pro.stripe}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs px-3 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"
+                        >
+                          Pro $133
+                        </a>
+                        <a
+                          href={message.paymentLinks.scale.stripe}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs px-3 py-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition"
+                        >
+                          Scale $333
+                        </a>
+                      </div>
+                      <a
+                        href={message.paymentLinks.pro.crypto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2 text-xs text-purple-500 hover:underline"
+                      >
+                        💎 Pay with crypto (5% off)
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

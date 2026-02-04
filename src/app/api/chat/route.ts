@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openai: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI Sales & Customer Success Agent at n01.app - the world's first autonomous AI development agency.
 
@@ -69,15 +77,33 @@ const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI Sales & Customer Success Agent 
 
 ## CRITICAL INSTRUCTIONS
 
-### When to SEND PAYMENT LINK:
-If the user has provided their email AND asks for a payment link, quote, or to proceed with an order:
-Include this marker at the END of your response:
-[SEND_PAYMENT: package_name]
+### PAYMENT LINKS - VERY IMPORTANT!
+When user asks for payment, quote, pricing, invoice, or wants to proceed:
+
+1. If you DON'T have their email yet, ask for it first
+2. If you HAVE their email, ALWAYS include the payment marker
+
+ALWAYS include this marker when sending payment link:
+[SEND_PAYMENT: PackageName]
+
+TRIGGER WORDS that mean "send payment link":
+- "payment link"
+- "send me a link"  
+- "I want to pay"
+- "let's proceed"
+- "I'm ready"
+- "send quote"
+- "invoice"
+- "how do I pay"
+- "take my money"
+- "let's do it"
+- "sign me up"
+- "I'll take the..."
 
 Examples:
-- User provides email and says "send me a payment link" → include [SEND_PAYMENT: Pro]
-- User provides email and says "I'm ready to pay" → include [SEND_PAYMENT: Starter]
-- User says "let's proceed with the Scale package" (after giving email) → include [SEND_PAYMENT: Scale]
+- "Send me a payment link for Pro" → "I'll send that right now! 📧 [SEND_PAYMENT: Pro]"
+- "I want to pay" → "Let me send you the payment link! [SEND_PAYMENT: Pro]"  
+- "Let's do it" → "Awesome! Sending your payment link now! 🚀 [SEND_PAYMENT: Starter]"
 
 ### When You CAN Help Directly:
 - Questions about our services, team, or process
@@ -337,7 +363,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -356,15 +382,40 @@ export async function POST(request: NextRequest) {
     let response = completion.choices[0]?.message?.content || "I apologize, I'm having trouble responding. Please try again.";
 
     let paymentLinkSent = false;
+    
+    // Get the last user message to check for payment intent
+    const lastUserMessage = messages.filter((m: any) => m.role === "user").pop()?.content?.toLowerCase() || "";
+    const paymentKeywords = ["payment", "pay", "link", "proceed", "ready", "quote", "invoice", "buy", "purchase", "sign me up", "let's do", "take my money", "i want", "i'll take"];
+    const userWantsPayment = paymentKeywords.some(kw => lastUserMessage.includes(kw));
 
     // Check for payment link marker
-    const paymentMatch = response.match(/\[SEND_PAYMENT:\s*(.+?)\]/);
+    const paymentMatch = response.match(/\[SEND_PAYMENT:\s*(.+?)\]/i);
     if (paymentMatch && leadData?.email) {
       // Remove the marker from the response
-      response = response.replace(/\s*\[SEND_PAYMENT:\s*.+?\]/, "").trim();
+      response = response.replace(/\s*\[SEND_PAYMENT:\s*.+?\]/i, "").trim();
       
       // Send payment link
       paymentLinkSent = await sendPaymentLink(leadData, paymentMatch[1].trim());
+      
+      // Add confirmation to response
+      if (paymentLinkSent && !response.toLowerCase().includes("sent") && !response.toLowerCase().includes("email")) {
+        response += "\n\n✅ I've sent the payment link to your email!";
+      }
+    } 
+    // BACKUP: If user clearly wants payment and we have email but AI didn't add marker
+    else if (userWantsPayment && leadData?.email && !paymentLinkSent) {
+      // Detect which package they might want
+      let detectedPackage = "Pro"; // default
+      if (lastUserMessage.includes("starter") || lastUserMessage.includes("49")) detectedPackage = "Starter";
+      else if (lastUserMessage.includes("scale") || lastUserMessage.includes("333")) detectedPackage = "Scale";
+      else if (lastUserMessage.includes("pro") || lastUserMessage.includes("133")) detectedPackage = "Pro";
+      else if (leadData.package) detectedPackage = leadData.package;
+      
+      paymentLinkSent = await sendPaymentLink(leadData, detectedPackage);
+      
+      if (paymentLinkSent) {
+        response += `\n\n✅ I've sent a payment link for the ${detectedPackage} package to ${leadData.email}! Check your inbox.`;
+      }
     }
 
     // Check for escalation marker
@@ -380,7 +431,27 @@ export async function POST(request: NextRequest) {
       await sendEscalationEmail(lastUserMessage, escalationMatch[1], leadData);
     }
 
-    return NextResponse.json({ response, paymentLinkSent });
+    // Generate direct payment links if we have email
+    let paymentLinks = null;
+    if (leadData?.email && (userWantsPayment || paymentLinkSent)) {
+      const email = encodeURIComponent(leadData.email);
+      paymentLinks = {
+        starter: {
+          stripe: `https://n01.app/pricing?package=starter&email=${email}`,
+          crypto: `https://n01.app/pay/crypto?amount=10&email=${email}&package=Starter`,
+        },
+        pro: {
+          stripe: `https://n01.app/pricing?package=pro&email=${email}`,
+          crypto: `https://n01.app/pay/crypto?amount=27&email=${email}&package=Pro`,
+        },
+        scale: {
+          stripe: `https://n01.app/pricing?package=scale&email=${email}`,
+          crypto: `https://n01.app/pay/crypto?amount=67&email=${email}&package=Scale`,
+        },
+      };
+    }
+
+    return NextResponse.json({ response, paymentLinkSent, paymentLinks });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
