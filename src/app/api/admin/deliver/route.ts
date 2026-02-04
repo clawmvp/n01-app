@@ -1,108 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Delivery automation endpoint
-// Creates GitHub repos and deploys to Vercel
-
-interface DeliveryData {
-  id: string;
-  projectId: string;
-  type: string;
-  title: string;
-  description?: string;
-  url?: string;
-  createdAt: string;
-}
-
-// In-memory delivery storage
-const deliveriesStore: Map<string, DeliveryData> = new Map();
+import { deliverProject, sendHandoverEmail } from "@/lib/delivery";
+import { getProject } from "@/lib/automation";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { projectId, deliveryType, details } = body;
+    const { projectId, action, credentials } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID required" }, { status: 400 });
     }
 
-    // Log the delivery request
-    console.log("\n========== DELIVERY REQUEST ==========");
-    console.log(`Project: ${projectId}`);
-    console.log(`Type: ${deliveryType}`);
-    console.log(`Details:`, details);
-    console.log("========================================\n");
+    // Check project exists
+    const project = await getProject(projectId);
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
-    const deliveryId = `D-${Date.now().toString(36).toUpperCase()}`;
+    // Handle different actions
+    if (action === "deliver") {
+      // Full delivery: GitHub + Vercel + Email
+      const result = await deliverProject(projectId);
+      return NextResponse.json({
+        success: result.success,
+        result,
+      });
+    }
 
-    const deliveryData = {
-      id: deliveryId,
-      projectId,
-      type: deliveryType,
-      title: `${deliveryType} delivery`,
-      description: details?.description,
-      url: details?.url,
-      createdAt: new Date().toISOString(),
-    };
+    if (action === "handover") {
+      // Send handover email with credentials
+      const success = await sendHandoverEmail(projectId, credentials);
+      return NextResponse.json({
+        success,
+        message: success ? "Handover email sent" : "Failed to send handover email",
+      });
+    }
 
-    deliveriesStore.set(deliveryId, deliveryData);
-
-    return NextResponse.json({ 
-      success: true, 
-      delivery: deliveryData,
-      message: "Delivery recorded successfully.",
+    // Default: return project status
+    return NextResponse.json({
+      success: true,
+      project,
+      availableActions: ["deliver", "handover"],
     });
   } catch (error) {
     console.error("Delivery error:", error);
-    return NextResponse.json({ error: "Failed to process delivery" }, { status: 500 });
+    return NextResponse.json({ error: "Delivery failed" }, { status: 500 });
   }
 }
 
-// Generate delivery instructions
-export async function GET() {
-  const instructions = {
-    github: {
-      title: "GitHub Repository Setup",
-      steps: [
-        "Create a new repository on GitHub",
-        "Clone the project template",
-        "Push code to the repository",
-        "Add client as collaborator",
-      ],
-      commands: [
-        "gh repo create client-project --public",
-        "git clone template-repo client-project",
-        "cd client-project && git push origin main",
-        "gh repo add-collaborator client-username",
-      ],
-    },
-    vercel: {
-      title: "Vercel Deployment",
-      steps: [
-        "Connect GitHub repository to Vercel",
-        "Configure environment variables",
-        "Deploy to production",
-        "Set up custom domain (if applicable)",
-      ],
-      commands: [
-        "vercel link",
-        "vercel env add",
-        "vercel --prod",
-        "vercel domains add custom-domain.com",
-      ],
-    },
-    handover: {
-      title: "Client Handover Checklist",
-      items: [
-        "✓ Source code delivered (GitHub)",
-        "✓ Live URL provided",
-        "✓ Environment variables documented",
-        "✓ Admin credentials shared",
-        "✓ Documentation included",
-        "✓ Revision process explained",
-      ],
-    },
-    deliveries: Array.from(deliveriesStore.values()),
-  };
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get("projectId");
 
-  return NextResponse.json({ instructions });
+  if (!projectId) {
+    return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+  }
+
+  const project = await getProject(projectId);
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    project,
+    deliveryStatus: {
+      hasGitHub: !!project.githubRepo,
+      hasVercel: !!project.vercelUrl,
+      isDelivered: project.status === "delivered" || project.status === "completed",
+    },
+  });
 }

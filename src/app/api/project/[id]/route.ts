@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { id } = await params;
   
-  const project = getProject(id);
+  const project = await getProject(id);
   
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -27,7 +27,7 @@ export async function PATCH(
   
   // Handle special actions
   if (action === "advance_task") {
-    const project = advanceProjectTask(id);
+    const project = await advanceProjectTask(id);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -35,7 +35,7 @@ export async function PATCH(
   }
   
   // Regular update
-  const project = updateProject(id, updates);
+  const project = await updateProject(id, updates);
   
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });

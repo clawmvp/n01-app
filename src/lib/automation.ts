@@ -1,7 +1,8 @@
 // Project Automation System
 // Handles the full lifecycle from payment to delivery
 
-import { Lead, saveLead, updateLead, getLead } from "./leads";
+import { kv } from "@vercel/kv";
+import { Lead, updateLead } from "./leads";
 
 // Project status flow
 export type ProjectStatus = 
@@ -60,8 +61,47 @@ export interface ProjectTask {
   completedAt?: string;
 }
 
-// In-memory project store (will sync to DB when configured)
-const projectsStore = new Map<string, Project>();
+// In-memory cache + KV persistence
+const projectsCache = new Map<string, Project>();
+let projectsCacheLoaded = false;
+
+// Check if KV is configured
+function isKVConfigured(): boolean {
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+// Load projects from KV
+async function loadProjectsCache(): Promise<void> {
+  if (projectsCacheLoaded || !isKVConfigured()) return;
+  
+  try {
+    const projectIds = await kv.smembers("project_ids") as string[];
+    if (projectIds && projectIds.length > 0) {
+      for (const id of projectIds) {
+        const project = await kv.get<Project>(`project:${id}`);
+        if (project) {
+          projectsCache.set(id, project);
+        }
+      }
+    }
+    projectsCacheLoaded = true;
+    console.log(`✅ Loaded ${projectsCache.size} projects from KV`);
+  } catch (error) {
+    console.error("Failed to load projects from KV:", error);
+  }
+}
+
+// Save project to KV
+async function saveProjectToKV(project: Project): Promise<void> {
+  if (!isKVConfigured()) return;
+  
+  try {
+    await kv.set(`project:${project.id}`, project);
+    await kv.sadd("project_ids", project.id);
+  } catch (error) {
+    console.error("Failed to save project to KV:", error);
+  }
+}
 
 // Package configurations
 const PACKAGE_CONFIG: Record<string, { deliveryDays: number; tasks: string[] }> = {
@@ -163,7 +203,8 @@ export async function createProjectFromLead(lead: Lead): Promise<Project> {
   };
   
   // Save project
-  projectsStore.set(projectId, project);
+  projectsCache.set(projectId, project);
+  await saveProjectToKV(project);
   
   // Update lead with project reference
   await updateLead(lead.id, { status: "in_progress" });
@@ -184,15 +225,35 @@ export async function createProjectFromLead(lead: Lead): Promise<Project> {
 /**
  * Get project by ID
  */
-export function getProject(id: string): Project | undefined {
-  return projectsStore.get(id);
+export async function getProject(id: string): Promise<Project | undefined> {
+  // Check cache first
+  if (projectsCache.has(id)) {
+    return projectsCache.get(id);
+  }
+  
+  // Try KV
+  if (isKVConfigured()) {
+    try {
+      const project = await kv.get<Project>(`project:${id}`);
+      if (project) {
+        projectsCache.set(id, project);
+        return project;
+      }
+    } catch (error) {
+      console.error("Failed to get project from KV:", error);
+    }
+  }
+  
+  return undefined;
 }
 
 /**
  * Get project by lead ID
  */
-export function getProjectByLeadId(leadId: string): Project | undefined {
-  for (const project of projectsStore.values()) {
+export async function getProjectByLeadId(leadId: string): Promise<Project | undefined> {
+  await loadProjectsCache();
+  
+  for (const project of projectsCache.values()) {
     if (project.leadId === leadId) return project;
   }
   return undefined;
@@ -201,8 +262,27 @@ export function getProjectByLeadId(leadId: string): Project | undefined {
 /**
  * Get all projects
  */
-export function getAllProjects(): Project[] {
-  return Array.from(projectsStore.values()).sort(
+export async function getAllProjects(): Promise<Project[]> {
+  await loadProjectsCache();
+  
+  // Refresh from KV if cache is empty
+  if (isKVConfigured() && projectsCache.size === 0) {
+    try {
+      const projectIds = await kv.smembers("project_ids") as string[];
+      if (projectIds && projectIds.length > 0) {
+        for (const id of projectIds) {
+          const project = await kv.get<Project>(`project:${id}`);
+          if (project) {
+            projectsCache.set(id, project);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh projects from KV:", error);
+    }
+  }
+  
+  return Array.from(projectsCache.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
@@ -210,20 +290,34 @@ export function getAllProjects(): Project[] {
 /**
  * Update project status
  */
-export function updateProject(id: string, updates: Partial<Project>): Project | null {
-  const project = projectsStore.get(id);
+export async function updateProject(id: string, updates: Partial<Project>): Promise<Project | null> {
+  let project = projectsCache.get(id);
+  
+  // Try KV if not in cache
+  if (!project && isKVConfigured()) {
+    project = await kv.get<Project>(`project:${id}`) || undefined;
+  }
+  
   if (!project) return null;
   
   const updated = { ...project, ...updates };
-  projectsStore.set(id, updated);
+  projectsCache.set(id, updated);
+  await saveProjectToKV(updated);
+  
   return updated;
 }
 
 /**
  * Advance to next task
  */
-export function advanceProjectTask(projectId: string): Project | null {
-  const project = projectsStore.get(projectId);
+export async function advanceProjectTask(projectId: string): Promise<Project | null> {
+  let project = projectsCache.get(projectId);
+  
+  // Try KV if not in cache
+  if (!project && isKVConfigured()) {
+    project = await kv.get<Project>(`project:${projectId}`) || undefined;
+  }
+  
   if (!project) return null;
   
   // Find current in_progress task and complete it
@@ -243,7 +337,9 @@ export function advanceProjectTask(projectId: string): Project | null {
     }
   }
   
-  projectsStore.set(projectId, project);
+  projectsCache.set(projectId, project);
+  await saveProjectToKV(project);
+  
   return project;
 }
 

@@ -413,7 +413,7 @@ export default function AdminDashboard() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <a
                           href={`/project/${project.id}`}
                           target="_blank"
@@ -432,8 +432,47 @@ export default function AdminDashboard() {
                           }}
                           className="px-3 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-700 transition"
                         >
-                          ⏭ Advance Task
+                          ⏭ Advance
                         </button>
+                        {progress === 100 && !project.vercelUrl && (
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Deploy project to GitHub + Vercel?")) return;
+                              const res = await fetch("/api/admin/deliver", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ projectId: project.id, action: "deliver" }),
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                alert(`Delivered!\nGitHub: ${data.result.githubRepo || "N/A"}\nVercel: ${data.result.vercelUrl || "N/A"}`);
+                                fetchData();
+                              } else {
+                                alert("Delivery failed: " + (data.error || "Unknown error"));
+                              }
+                            }}
+                            className="px-3 py-2 bg-green-600 rounded-lg text-sm hover:bg-green-700 transition"
+                          >
+                            🚀 Deploy
+                          </button>
+                        )}
+                        {project.vercelUrl && project.status !== "completed" && (
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Send handover email to client?")) return;
+                              await fetch("/api/admin/deliver", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ projectId: project.id, action: "handover" }),
+                              });
+                              alert("Handover email sent!");
+                              fetchData();
+                            }}
+                            className="px-3 py-2 bg-purple-600 rounded-lg text-sm hover:bg-purple-700 transition"
+                          >
+                            📧 Handover
+                          </button>
+                        )}
                       </div>
                     </div>
 

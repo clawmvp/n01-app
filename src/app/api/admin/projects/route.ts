@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllProjects, getProject, updateProject, advanceProjectTask, createProjectFromLead } from "@/lib/automation";
+import { getAllProjects, updateProject, advanceProjectTask, createProjectFromLead } from "@/lib/automation";
 import { getLead } from "@/lib/leads";
 
 export async function GET() {
   try {
-    const projects = getAllProjects();
+    const projects = await getAllProjects();
     return NextResponse.json({ projects });
   } catch (error) {
     console.error("Get projects error:", error);
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest) {
 
     // Handle special actions
     if (action === "advance") {
-      const project = advanceProjectTask(projectId);
+      const project = await advanceProjectTask(projectId);
       if (!project) {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
       }
@@ -55,7 +55,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Regular update
-    const project = updateProject(projectId, updates);
+    const project = await updateProject(projectId, updates);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
