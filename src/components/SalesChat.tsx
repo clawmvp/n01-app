@@ -8,6 +8,14 @@ interface Message {
   content: string;
 }
 
+interface LeadData {
+  name?: string;
+  email?: string;
+  phone?: string;
+  service?: string;
+  package?: string;
+}
+
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -15,18 +23,21 @@ const getGreeting = () => {
   return "Good evening";
 };
 
+// Email regex
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+// Phone regex (international format)
+const PHONE_REGEX = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/;
+// Name pattern (2+ words starting with capital)
+const NAME_REGEX = /^[A-Z][a-z]+ [A-Z][a-z]+/;
+
 export default function SalesChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const [leadData, setLeadData] = useState<{
-    name?: string;
-    email?: string;
-    service?: string;
-    package?: string;
-  }>({});
+  const [leadData, setLeadData] = useState<LeadData>({});
+  const [leadSaved, setLeadSaved] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Show notification after delay
@@ -49,7 +60,7 @@ export default function SalesChat() {
     if (isOpen && messages.length === 0) {
       const greeting = `${getGreeting()}! 👋 I'm ARIA, the AI Sales Agent at n01.app.
 
-I work alongside our AI team - NOVA coordinates projects, PIXEL builds beautiful UIs, NEXUS handles backends, and the rest of the crew.
+I work alongside our AI team - NOVA coordinates projects, PIXEL builds beautiful UIs & logos, NEXUS handles backends, and the rest of the crew.
 
 How can I help you today? Looking to build something?`;
       
@@ -62,6 +73,60 @@ How can I help you today? Looking to build something?`;
       ]);
     }
   }, [isOpen, messages.length]);
+
+  // Save lead when we have enough info
+  useEffect(() => {
+    const saveLead = async () => {
+      if (leadSaved) return;
+      if (!leadData.email) return; // Need at least email
+      
+      try {
+        const response = await fetch("/api/chat/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...leadData,
+            source: "chatbot",
+            conversation: messages.map(m => `${m.role}: ${m.content}`).join("\n\n"),
+          }),
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          setLeadSaved(true);
+          console.log("Lead saved:", data.leadId);
+        }
+      } catch (error) {
+        console.error("Failed to save lead:", error);
+      }
+    };
+
+    saveLead();
+  }, [leadData, leadSaved, messages]);
+
+  // Extract contact info from message
+  const extractContactInfo = (text: string): Partial<LeadData> => {
+    const extracted: Partial<LeadData> = {};
+    
+    // Extract email
+    const emailMatch = text.match(EMAIL_REGEX);
+    if (emailMatch) {
+      extracted.email = emailMatch[0].toLowerCase();
+    }
+    
+    // Extract phone
+    const phoneMatch = text.match(PHONE_REGEX);
+    if (phoneMatch) {
+      extracted.phone = phoneMatch[0].replace(/[^\d+]/g, "");
+    }
+    
+    // Extract name (if message looks like a name)
+    if (NAME_REGEX.test(text) && text.split(" ").length <= 4) {
+      extracted.name = text.split(" ").slice(0, 3).join(" ");
+    }
+    
+    return extracted;
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isTyping) return;
@@ -77,18 +142,37 @@ How can I help you today? Looking to build something?`;
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    // Check for name/email in message
-    if (!leadData.name && userMessage.match(/^[A-Z][a-z]+ ?[A-Z]?[a-z]*$/)) {
-      setLeadData((prev) => ({ ...prev, name: userMessage }));
+    // Extract contact info
+    const extracted = extractContactInfo(userMessage);
+    if (Object.keys(extracted).length > 0) {
+      setLeadData((prev) => ({ ...prev, ...extracted }));
     }
-    if (!leadData.email && userMessage.includes("@")) {
-      setLeadData((prev) => ({ ...prev, email: userMessage }));
+
+    // Detect package interest
+    const lowerMessage = userMessage.toLowerCase();
+    if (lowerMessage.includes("starter") || lowerMessage.includes("$49")) {
+      setLeadData((prev) => ({ ...prev, package: "Starter" }));
+    } else if (lowerMessage.includes("pro") || lowerMessage.includes("$133")) {
+      setLeadData((prev) => ({ ...prev, package: "Pro" }));
+    } else if (lowerMessage.includes("scale") || lowerMessage.includes("$333")) {
+      setLeadData((prev) => ({ ...prev, package: "Scale" }));
+    }
+
+    // Detect service interest
+    if (lowerMessage.includes("logo")) {
+      setLeadData((prev) => ({ ...prev, service: "Logo Design" }));
+    } else if (lowerMessage.includes("website") || lowerMessage.includes("landing")) {
+      setLeadData((prev) => ({ ...prev, service: "Website" }));
+    } else if (lowerMessage.includes("app")) {
+      setLeadData((prev) => ({ ...prev, service: "Web App" }));
+    } else if (lowerMessage.includes("banner") || lowerMessage.includes("graphic")) {
+      setLeadData((prev) => ({ ...prev, service: "Graphics" }));
     }
 
     setIsTyping(true);
 
     try {
-      // Call OpenAI API
+      // Call OpenAI API with lead data
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,7 +181,7 @@ How can I help you today? Looking to build something?`;
             role: m.role,
             content: m.content,
           })),
-          leadData,
+          leadData: { ...leadData, ...extracted },
         }),
       });
 
@@ -105,6 +189,11 @@ How can I help you today? Looking to build something?`;
 
       if (data.error) {
         throw new Error(data.error);
+      }
+
+      // Check if ARIA is sending a payment link
+      if (data.paymentLinkSent) {
+        console.log("Payment link sent to:", leadData.email);
       }
 
       // Add AI response
@@ -169,7 +258,7 @@ How can I help you today? Looking to build something?`;
             <div>
               <p className="text-sm font-medium">Hey! I&apos;m ARIA</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Need a website, app, or content? Let&apos;s chat!
+                Need a website, app, logo, or content? Let&apos;s chat!
               </p>
             </div>
             <button
@@ -202,6 +291,15 @@ How can I help you today? Looking to build something?`;
               <span className="text-xs">Online</span>
             </div>
           </div>
+
+          {/* Lead indicator */}
+          {leadData.email && (
+            <div className="px-4 py-2 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
+              <p className="text-xs text-green-700 dark:text-green-400">
+                ✓ Connected as {leadData.name || leadData.email}
+              </p>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
@@ -241,7 +339,7 @@ How can I help you today? Looking to build something?`;
           {messages.length === 1 && (
             <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <div className="flex flex-wrap gap-2">
-                {["I need a website", "Show me pricing", "What can you build?"].map((text) => (
+                {["I need a website", "I need a logo", "Show me pricing"].map((text) => (
                   <button
                     key={text}
                     onClick={() => {
