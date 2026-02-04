@@ -142,8 +142,16 @@ export async function GET(request: NextRequest) {
     });
 
     const data = await response.json();
+    
+    interface VercelProject {
+      id: string;
+      name: string;
+      framework: string;
+      updatedAt: string;
+    }
+    
     return NextResponse.json({
-      projects: data.projects?.map((p: any) => ({
+      projects: data.projects?.map((p: VercelProject) => ({
         id: p.id,
         name: p.name,
         framework: p.framework,

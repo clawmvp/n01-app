@@ -3,8 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 // Delivery automation endpoint
 // Creates GitHub repos and deploys to Vercel
 
+interface DeliveryData {
+  id: string;
+  projectId: string;
+  type: string;
+  title: string;
+  description?: string;
+  url?: string;
+  createdAt: string;
+}
+
 // In-memory delivery storage
-const deliveriesStore: Map<string, any> = new Map();
+const deliveriesStore: Map<string, DeliveryData> = new Map();
 
 export async function POST(request: NextRequest) {
   try {

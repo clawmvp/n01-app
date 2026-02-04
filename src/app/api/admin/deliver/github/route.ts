@@ -115,8 +115,16 @@ export async function GET(request: NextRequest) {
     });
 
     const repos = await response.json();
+    
+    interface GitHubRepo {
+      name: string;
+      html_url: string;
+      created_at: string;
+      private: boolean;
+    }
+    
     return NextResponse.json({
-      repos: repos.map((r: any) => ({
+      repos: repos.map((r: GitHubRepo) => ({
         name: r.name,
         url: r.html_url,
         createdAt: r.created_at,

@@ -96,6 +96,19 @@ export async function deleteLead(id: string): Promise<boolean> {
   return deleted;
 }
 
+// Stats helper
+export async function getLeadStats() {
+  const leads = Array.from(memoryStore.values());
+  return {
+    total: leads.length,
+    new: leads.filter(l => l.status === "new").length,
+    contacted: leads.filter(l => l.status === "contacted").length,
+    paid: leads.filter(l => l.status === "paid").length,
+    inProgress: leads.filter(l => l.status === "in_progress").length,
+    completed: leads.filter(l => l.status === "completed").length,
+  };
+}
+
 // Helper functions
 export function getWhatsAppLink(phone: string, message?: string): string {
   const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, "");
