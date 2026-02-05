@@ -343,7 +343,15 @@ export default function AdminDashboard() {
     totalLeads: leads.length,
     newLeads: leads.filter(l => l.status === "new").length,
     paidLeads: leads.filter(l => l.status === "paid" || l.paymentStatus === "upfront_paid").length,
-    activeProjects: projects.filter(p => p.status === "IN_PROGRESS").length,
+    totalProjects: projects.length,
+    activeProjects: projects.filter(p => 
+      p.status === "planning" || 
+      p.status === "designing" || 
+      p.status === "developing" || 
+      p.status === "testing" || 
+      p.status === "review"
+    ).length,
+    deliveredProjects: projects.filter(p => p.status === "delivered" || p.status === "completed").length,
   };
 
   return (
@@ -376,7 +384,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="text-3xl font-bold text-blue-500">{stats.totalLeads}</div>
             <div className="text-gray-400 text-sm mt-1">Total Leads</div>
@@ -387,11 +395,19 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="text-3xl font-bold text-purple-500">{stats.paidLeads}</div>
-            <div className="text-gray-400 text-sm mt-1">Paid</div>
+            <div className="text-gray-400 text-sm mt-1">Paid Leads</div>
+          </div>
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-cyan-500">{stats.totalProjects}</div>
+            <div className="text-gray-400 text-sm mt-1">Total Projects</div>
           </div>
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="text-3xl font-bold text-orange-500">{stats.activeProjects}</div>
             <div className="text-gray-400 text-sm mt-1">Active Projects</div>
+          </div>
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="text-3xl font-bold text-emerald-500">{stats.deliveredProjects}</div>
+            <div className="text-gray-400 text-sm mt-1">Delivered</div>
           </div>
         </div>
 
