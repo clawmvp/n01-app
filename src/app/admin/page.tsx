@@ -191,7 +191,40 @@ function getTimeRemaining(project: Project): string {
   return hours > 0 ? `~${hours}h ${mins}m` : `~${mins}m`;
 }
 
-type Tab = "leads" | "projects" | "settings";
+type Tab = "leads" | "projects" | "scout" | "settings";
+
+// Scout Types
+interface ScoutLead {
+  id: string;
+  platform: "reddit" | "twitter";
+  postId: string;
+  postUrl: string;
+  author: string;
+  authorUrl?: string;
+  content: string;
+  title?: string;
+  subreddit?: string;
+  createdAt: string;
+  discoveredAt: string;
+  score?: number;
+  qualifiedAt?: string;
+  qualificationReason?: string;
+  intent?: "high" | "medium" | "low";
+  budget?: "unknown" | "low" | "medium" | "high";
+  projectType?: string;
+  status: "new" | "qualified" | "outreach_pending" | "outreach_sent" | "replied" | "converted" | "ignored";
+  outreachMessage?: string;
+  outreachSentAt?: string;
+  keywords: string[];
+  confidence: number;
+}
+
+interface ScoutStats {
+  total: number;
+  byStatus: Record<string, number>;
+  byPlatform: Record<string, number>;
+  avgScore: number;
+}
 
 export default function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -205,6 +238,16 @@ export default function AdminDashboard() {
   const [editingDeliverables, setEditingDeliverables] = useState<Project | null>(null);
   const [analyzingProject, setAnalyzingProject] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  
+  // Scout state
+  const [scoutLeads, setScoutLeads] = useState<ScoutLead[]>([]);
+  const [scoutStats, setScoutStats] = useState<ScoutStats | null>(null);
+  const [scoutConfig, setScoutConfig] = useState<any>(null);
+  const [scoutCredentials, setScoutCredentials] = useState<any>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [generatingMessage, setGeneratingMessage] = useState<string | null>(null);
+  const [sendingOutreach, setSendingOutreach] = useState<string | null>(null);
+  const [expandedLead, setExpandedLead] = useState<string | null>(null);
   
   // Auto-refresh state
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -225,16 +268,24 @@ export default function AdminDashboard() {
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [leadsRes, projectsRes] = await Promise.all([
+      const [leadsRes, projectsRes, scoutLeadsRes, scoutConfigRes] = await Promise.all([
         fetch("/api/admin/leads"),
         fetch("/api/admin/projects").catch(() => ({ json: () => ({ projects: [] }) })),
+        fetch("/api/scout/leads").catch(() => ({ json: () => ({ leads: [], stats: null }) })),
+        fetch("/api/scout/scan").catch(() => ({ json: () => ({}) })),
       ]);
       
       const leadsData = await leadsRes.json();
       const projectsData = await projectsRes.json();
+      const scoutLeadsData = await scoutLeadsRes.json();
+      const scoutConfigData = await scoutConfigRes.json();
       
       setLeads(leadsData.leads || []);
       setProjects(projectsData.projects || []);
+      setScoutLeads(scoutLeadsData.leads || []);
+      setScoutStats(scoutLeadsData.stats || null);
+      setScoutConfig(scoutConfigData.config || null);
+      setScoutCredentials(scoutConfigData.credentials || null);
       setLastRefresh(new Date());
       setCountdown(refreshInterval);
     } catch (err) {
@@ -487,7 +538,7 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-xl w-fit">
-          {(["leads", "projects", "settings"] as Tab[]).map((tab) => (
+          {(["leads", "projects", "scout", "settings"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

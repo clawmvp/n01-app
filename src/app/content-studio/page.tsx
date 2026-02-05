@@ -37,6 +37,9 @@ const PROJECTS: Project[] = [
   { id: 'p7', name: 'Movie Clips', description: 'Memorable movie scenes → shorts', status: 'ready', icon: '🎬' },
   { id: 'p8', name: 'Evergreen Recycler', description: 'Research & download viral videos', status: 'ready', icon: '♻️' },
   { id: 'p9', name: 'Language Arbitrage', description: 'Translate videos to other languages', status: 'ready', icon: '🌍' },
+  { id: 'p9-batch', name: 'Batch Translate', description: '1 video → 10 languages automatically', status: 'ready', icon: '🌐' },
+  { id: 'thumbnails', name: 'Auto Thumbnails', description: 'Generate viral thumbnails with DALL-E', status: 'ready', icon: '🖼️' },
+  { id: 'rss-monitor', name: 'RSS Monitor', description: 'Auto-watch podcasts for new episodes', status: 'ready', icon: '📡' },
 ];
 
 export default function ContentStudioPage() {
@@ -200,6 +203,24 @@ export default function ContentStudioPage() {
                   icon="⬇️"
                   onClick={() => runProject('p8')}
                   loading={runningProject === 'p8'}
+                />
+                <ActionButton
+                  label="RSS Monitor"
+                  icon="📡"
+                  onClick={() => runProject('rss-monitor')}
+                  loading={runningProject === 'rss-monitor'}
+                />
+                <ActionButton
+                  label="Batch Translate"
+                  icon="🌐"
+                  onClick={() => runProject('p9-batch')}
+                  loading={runningProject === 'p9-batch'}
+                />
+                <ActionButton
+                  label="Auto Thumbnails"
+                  icon="🖼️"
+                  onClick={() => runProject('thumbnails')}
+                  loading={runningProject === 'thumbnails'}
                 />
                 <ActionButton
                   label="Refresh Stats"

@@ -17,6 +17,10 @@ const PROJECT_COMMANDS: Record<string, { dir: string; cmd: string }> = {
   p7: { dir: 'p7-movie-clips', cmd: 'npx tsx generate.ts' },
   p8: { dir: 'p8-evergreen-recycler', cmd: 'npx tsx viral-researcher-v2.ts' },
   p9: { dir: 'p9-language-arbitrage', cmd: 'npx tsx translate-video-v1.ts' },
+  // New features
+  'p9-batch': { dir: 'p9-language-arbitrage', cmd: 'npx tsx batch-translate.ts' },
+  'thumbnails': { dir: 'automation', cmd: 'npx tsx auto-thumbnails.ts batch' },
+  'rss-monitor': { dir: 'p4-podcast-clips-v2', cmd: 'npx tsx rss-monitor.ts run' },
 };
 
 export async function POST(request: NextRequest) {
