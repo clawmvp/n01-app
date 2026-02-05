@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runFullScan, getScoutConfig } from "@/lib/scout-agents";
 
-/**
- * Cron job for automated lead scouting
- * Configure in vercel.json:
- * {
- *   "crons": [
- *     { "path": "/api/cron/scout", "schedule": "*/30 * * * *" }
- *   ]
- * }
- */
+// Cron job for automated lead scouting
+// Configure in vercel.json with schedule: "0,30 * * * *" (every 30 min)
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,9 +34,8 @@ export async function GET(request: NextRequest) {
     const result = await runFullScan();
 
     return NextResponse.json({
-      success: true,
-      timestamp: new Date().toISOString(),
       ...result,
+      timestamp: new Date().toISOString(),
     });
 
   } catch (error: any) {

@@ -278,14 +278,14 @@ export default function AdminDashboard() {
       const leadsData = await leadsRes.json();
       const projectsData = await projectsRes.json();
       const scoutLeadsData = await scoutLeadsRes.json();
-      const scoutConfigData = await scoutConfigRes.json();
+      const scoutConfigData = await scoutConfigRes.json() as { config?: any; credentials?: any };
       
       setLeads(leadsData.leads || []);
       setProjects(projectsData.projects || []);
       setScoutLeads(scoutLeadsData.leads || []);
       setScoutStats(scoutLeadsData.stats || null);
-      setScoutConfig(scoutConfigData.config || null);
-      setScoutCredentials(scoutConfigData.credentials || null);
+      setScoutConfig(scoutConfigData?.config || null);
+      setScoutCredentials(scoutConfigData?.credentials || null);
       setLastRefresh(new Date());
       setCountdown(refreshInterval);
     } catch (err) {
@@ -1207,6 +1207,381 @@ export default function AdminDashboard() {
                 );
               })
             )}
+          </div>
+        )}
+
+        {/* Scout Tab */}
+        {activeTab === "scout" && (
+          <div className="space-y-6">
+            {/* Scout Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                <div className="text-3xl font-bold text-blue-500">{scoutStats?.total || 0}</div>
+                <div className="text-gray-400 text-sm mt-1">Total Leads Found</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                <div className="text-3xl font-bold text-green-500">{scoutStats?.byStatus?.qualified || 0}</div>
+                <div className="text-gray-400 text-sm mt-1">Qualified</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                <div className="text-3xl font-bold text-purple-500">{scoutStats?.byStatus?.outreach_sent || 0}</div>
+                <div className="text-gray-400 text-sm mt-1">Outreach Sent</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                <div className="text-3xl font-bold text-orange-500">{scoutStats?.avgScore?.toFixed(1) || "0"}</div>
+                <div className="text-gray-400 text-sm mt-1">Avg Score</div>
+              </div>
+            </div>
+
+            {/* Scout Controls */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold">🔍 AI Scout System</h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Automat monitoring Reddit & Twitter for potential clients
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={async () => {
+                      setIsScanning(true);
+                      try {
+                        const res = await fetch("/api/scout/scan", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ password: "n01admin2024" }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          alert(`Scan complete!\n\nPosts scanned: ${data.summary?.totalScanned || 0}\nLeads found: ${data.summary?.totalLeadsFound || 0}\nQualified: ${data.summary?.totalQualified || 0}`);
+                          fetchData();
+                        } else {
+                          alert("Scan failed: " + (data.error || "Unknown error"));
+                        }
+                      } catch (err) {
+                        alert("Scan failed");
+                      } finally {
+                        setIsScanning(false);
+                      }
+                    }}
+                    disabled={isScanning}
+                    className="px-4 py-2 bg-blue-600 rounded-xl font-medium hover:bg-blue-700 transition disabled:opacity-50"
+                  >
+                    {isScanning ? "🔄 Scanning..." : "🔍 Run Scan Now"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const enabled = !scoutConfig?.enabled;
+                      await fetch("/api/scout/scan", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ password: "n01admin2024", enabled }),
+                      });
+                      fetchData();
+                    }}
+                    className={`px-4 py-2 rounded-xl font-medium transition ${
+                      scoutConfig?.enabled 
+                        ? "bg-green-600 hover:bg-green-700" 
+                        : "bg-gray-700 hover:bg-gray-600"
+                    }`}
+                  >
+                    {scoutConfig?.enabled ? "✅ Auto-Scan ON" : "⏸️ Auto-Scan OFF"}
+                  </button>
+                </div>
+              </div>
+
+              {/* API Credentials Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className={`p-4 rounded-xl ${scoutCredentials?.reddit?.configured ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/30"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${scoutCredentials?.reddit?.configured ? "bg-green-500" : "bg-red-500"}`}></span>
+                    <span className="font-medium">Reddit API</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {scoutCredentials?.reddit?.configured 
+                      ? (scoutCredentials?.reddit?.canPost ? "Read + Write" : "Read Only")
+                      : "Not configured"}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-xl ${scoutCredentials?.twitter?.configured ? "bg-green-500/10 border border-green-500/30" : "bg-red-500/10 border border-red-500/30"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${scoutCredentials?.twitter?.configured ? "bg-green-500" : "bg-red-500"}`}></span>
+                    <span className="font-medium">Twitter/X API</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {scoutCredentials?.twitter?.configured 
+                      ? (scoutCredentials?.twitter?.canPost ? "Read + Write" : "Read Only")
+                      : "Not configured"}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-xl ${scoutCredentials?.claude ? "bg-green-500/10 border border-green-500/30" : "bg-yellow-500/10 border border-yellow-500/30"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${scoutCredentials?.claude ? "bg-green-500" : "bg-yellow-500"}`}></span>
+                    <span className="font-medium">Claude AI</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {scoutCredentials?.claude ? "For lead qualification" : "Using basic scoring"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Last scan info */}
+              {scoutConfig?.lastScanAt && (
+                <p className="text-sm text-gray-500">
+                  Last scan: {new Date(scoutConfig.lastScanAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* Scout Leads List */}
+            <div className="bg-gray-900 rounded-2xl border border-gray-800">
+              <div className="p-6 border-b border-gray-800">
+                <h3 className="font-semibold">📋 Discovered Leads</h3>
+              </div>
+              
+              {scoutLeads.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-gray-400">No leads found yet. Run a scan to discover potential clients.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-800">
+                  {scoutLeads.slice(0, 50).map((lead) => (
+                    <div key={lead.id} className="p-4 hover:bg-gray-800/50 transition">
+                      <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                        {/* Lead Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${
+                              lead.platform === "reddit" ? "bg-orange-500/20 text-orange-400" : "bg-blue-500/20 text-blue-400"
+                            }`}>
+                              {lead.platform === "reddit" ? "Reddit" : "Twitter"}
+                            </span>
+                            {lead.subreddit && (
+                              <span className="text-xs text-gray-500">r/{lead.subreddit}</span>
+                            )}
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${
+                              lead.status === "qualified" ? "bg-green-500/20 text-green-400" :
+                              lead.status === "outreach_sent" ? "bg-purple-500/20 text-purple-400" :
+                              lead.status === "replied" ? "bg-blue-500/20 text-blue-400" :
+                              lead.status === "converted" ? "bg-yellow-500/20 text-yellow-400" :
+                              "bg-gray-500/20 text-gray-400"
+                            }`}>
+                              {lead.status}
+                            </span>
+                            {lead.score && (
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-mono ${
+                                lead.score >= 8 ? "bg-green-500/20 text-green-400" :
+                                lead.score >= 6 ? "bg-yellow-500/20 text-yellow-400" :
+                                "bg-gray-500/20 text-gray-400"
+                              }`}>
+                                Score: {lead.score}/10
+                              </span>
+                            )}
+                          </div>
+                          
+                          <a 
+                            href={lead.postUrl} 
+                            target="_blank" 
+                            className="font-medium text-white hover:text-blue-400 transition line-clamp-1"
+                          >
+                            {lead.title || lead.content.slice(0, 100)}
+                          </a>
+                          
+                          <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+                            {lead.content}
+                          </p>
+                          
+                          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-500">
+                            <span>by @{lead.author}</span>
+                            <span>•</span>
+                            <span>{new Date(lead.discoveredAt).toLocaleDateString()}</span>
+                            {lead.keywords.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>Keywords: {lead.keywords.slice(0, 2).join(", ")}</span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Qualification Reason */}
+                          {lead.qualificationReason && (
+                            <p className="text-xs text-gray-500 mt-2 italic">
+                              AI: {lead.qualificationReason}
+                            </p>
+                          )}
+
+                          {/* Expanded Content */}
+                          {expandedLead === lead.id && (
+                            <div className="mt-4 space-y-3">
+                              {/* Full content */}
+                              <div className="bg-gray-800/50 p-3 rounded-lg">
+                                <p className="text-sm text-gray-300 whitespace-pre-wrap">{lead.content}</p>
+                              </div>
+                              
+                              {/* Outreach message */}
+                              {lead.outreachMessage && (
+                                <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700">
+                                  <p className="text-xs text-blue-400 mb-1">Generated Message:</p>
+                                  <p className="text-sm text-white">{lead.outreachMessage}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap lg:flex-col gap-2">
+                          <button
+                            onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}
+                            className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs hover:bg-gray-700 transition"
+                          >
+                            {expandedLead === lead.id ? "Collapse" : "Expand"}
+                          </button>
+                          
+                          <a
+                            href={lead.postUrl}
+                            target="_blank"
+                            className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs hover:bg-gray-700 transition text-center"
+                          >
+                            View Post
+                          </a>
+
+                          {!lead.outreachMessage && (
+                            <button
+                              onClick={async () => {
+                                setGeneratingMessage(lead.id);
+                                try {
+                                  const res = await fetch("/api/scout/outreach", {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ password: "n01admin2024", leadId: lead.id }),
+                                  });
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    fetchData();
+                                    setExpandedLead(lead.id);
+                                  }
+                                } catch (err) {
+                                  alert("Failed to generate message");
+                                } finally {
+                                  setGeneratingMessage(null);
+                                }
+                              }}
+                              disabled={generatingMessage === lead.id}
+                              className="px-3 py-1.5 bg-blue-600 rounded-lg text-xs hover:bg-blue-700 transition disabled:opacity-50"
+                            >
+                              {generatingMessage === lead.id ? "..." : "Generate Reply"}
+                            </button>
+                          )}
+
+                          {lead.outreachMessage && lead.status !== "outreach_sent" && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Send this reply to @${lead.author}?\n\n"${lead.outreachMessage}"`)) return;
+                                setSendingOutreach(lead.id);
+                                try {
+                                  const res = await fetch("/api/scout/outreach", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ password: "n01admin2024", leadId: lead.id }),
+                                  });
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    alert("Outreach sent!");
+                                    fetchData();
+                                  } else {
+                                    alert("Send failed: " + (data.error || "Unknown error"));
+                                  }
+                                } catch (err) {
+                                  alert("Failed to send outreach");
+                                } finally {
+                                  setSendingOutreach(null);
+                                }
+                              }}
+                              disabled={sendingOutreach === lead.id}
+                              className="px-3 py-1.5 bg-green-600 rounded-lg text-xs hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              {sendingOutreach === lead.id ? "..." : "Send Reply"}
+                            </button>
+                          )}
+
+                          {lead.status !== "ignored" && (
+                            <button
+                              onClick={async () => {
+                                await fetch("/api/scout/leads", {
+                                  method: "DELETE",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ password: "n01admin2024", leadId: lead.id }),
+                                });
+                                fetchData();
+                              }}
+                              className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs hover:bg-red-600 transition"
+                            >
+                              Ignore
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Scout Configuration */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <h3 className="font-semibold mb-4">⚙️ Scout Configuration</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Reddit Config */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-400">Reddit Settings</h4>
+                  <div className="bg-gray-800/50 p-4 rounded-xl">
+                    <p className="text-xs text-gray-500 mb-2">Monitored Subreddits:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {scoutConfig?.platforms?.reddit?.subreddits?.slice(0, 10).map((sub: string) => (
+                        <span key={sub} className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                          r/{sub}
+                        </span>
+                      ))}
+                      {(scoutConfig?.platforms?.reddit?.subreddits?.length || 0) > 10 && (
+                        <span className="text-xs text-gray-500">
+                          +{scoutConfig.platforms.reddit.subreddits.length - 10} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Twitter Config */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-400">Twitter Settings</h4>
+                  <div className="bg-gray-800/50 p-4 rounded-xl">
+                    <p className="text-xs text-gray-500 mb-2">Search Keywords:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {scoutConfig?.platforms?.twitter?.keywords?.slice(0, 5).map((kw: string) => (
+                        <span key={kw} className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Min Score */}
+              <div className="mt-4 flex items-center gap-4">
+                <span className="text-sm text-gray-400">Min qualification score:</span>
+                <span className="px-3 py-1 bg-gray-800 rounded-lg font-mono">
+                  {scoutConfig?.minQualificationScore || 6}/10
+                </span>
+                <span className="text-sm text-gray-400">Scan interval:</span>
+                <span className="px-3 py-1 bg-gray-800 rounded-lg font-mono">
+                  {scoutConfig?.scanIntervalMinutes || 30} min
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
