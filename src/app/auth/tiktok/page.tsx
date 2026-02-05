@@ -2,7 +2,7 @@
 
 const CLIENT_KEY = 'awmeovkn7kflgtoz';
 const REDIRECT_URI = 'https://n01.app/api/auth/tiktok/callback';
-const SCOPES = 'user.info.basic';
+const SCOPES = 'user.info.basic,video.upload,video.publish';
 
 export default function TikTokAuthPage() {
   const authUrl = `https://www.tiktok.com/v2/auth/authorize?` +
