@@ -1,8 +1,10 @@
 // AI Project Builder
 // Generates complete applications based on client brief using AI
+// Now with smart brief analysis to build ONLY what client requested
 
 import OpenAI from "openai";
 import { Project, getProject, updateProject } from "./automation";
+import { analyzeBrief, getFileStructure, ProjectRequirements, validateDeliverables } from "./ai-analyzer";
 
 // Initialize OpenAI
 function getOpenAI(): OpenAI {
@@ -139,10 +141,12 @@ module.exports = {
 
 /**
  * Generate a complete project based on the brief
+ * Now with smart analysis to build ONLY what was requested
  */
 export async function generateProject(projectId: string): Promise<{
   success: boolean;
   files: { path: string; content: string }[];
+  requirements?: ProjectRequirements;
   error?: string;
 }> {
   console.log("🤖 Starting AI project generation for:", projectId);
@@ -153,20 +157,51 @@ export async function generateProject(projectId: string): Promise<{
   }
 
   const brief = project.brief || project.description || "A modern web application";
-  const packageType = project.packageType || "custom";
+  const conversation = project.conversation || "";
   const clientName = project.clientName || "Client";
   const projectName = project.name.replace(/['"]s?\s+/g, "-").toLowerCase();
 
   console.log("📋 Brief:", brief.substring(0, 200) + "...");
-  console.log("📦 Package:", packageType);
+  console.log("💬 Conversation:", conversation ? "Available" : "Not available");
+
+  // STEP 1: Analyze the brief to understand what client actually wants
+  console.log("\n🔍 STEP 1: Analyzing client requirements...");
+  let requirements: ProjectRequirements;
+  
+  try {
+    requirements = await analyzeBrief(brief, conversation);
+  } catch (error) {
+    console.log("⚠️ Analysis failed, using defaults");
+    requirements = {
+      projectType: "landing_page",
+      deliverables: ["Website"],
+      features: [],
+      style: {},
+      techStack: ["Next.js", "React", "Tailwind CSS"],
+      complexity: "medium",
+      estimatedFiles: 10,
+      summary: brief,
+      originalBrief: brief,
+    };
+  }
+
+  console.log("\n📊 Analysis Results:");
+  console.log(`   Type: ${requirements.projectType}`);
+  console.log(`   Deliverables: ${requirements.deliverables.join(", ")}`);
+  console.log(`   Summary: ${requirements.summary}`);
 
   const files: { path: string; content: string }[] = [];
-  const structure = PROJECT_STRUCTURES[packageType] || PROJECT_STRUCTURES.custom;
+  
+  // STEP 2: Get file structure based on what client wants
+  const structure = getFileStructure(requirements);
+  console.log(`\n📁 Will generate ${structure.length} files for ${requirements.projectType}`);
 
   try {
     const openai = getOpenAI();
 
-    // Generate each file
+    // STEP 3: Generate each file based on requirements
+    console.log("\n🔨 STEP 3: Generating files...");
+    
     for (const filePath of structure) {
       console.log(`  📄 Generating: ${filePath}`);
 
@@ -176,33 +211,154 @@ export async function generateProject(projectId: string): Promise<{
       if (BASE_CONFIGS[filePath]) {
         content = BASE_CONFIGS[filePath];
       } else if (filePath === "package.json") {
-        content = generatePackageJson(projectName, packageType);
+        content = generatePackageJson(projectName, requirements.projectType);
       } else if (filePath.endsWith(".svg")) {
-        content = await generateSVGLogo(openai, brief, clientName);
+        content = await generateSVGLogo(openai, requirements.summary, clientName);
+      } else if (filePath.endsWith(".md")) {
+        content = await generateDocumentation(openai, filePath, requirements, clientName);
       } else {
-        content = await generateFileContent(openai, filePath, brief, packageType, clientName);
+        // Pass requirements to file generator for context
+        content = await generateFileContentSmart(openai, filePath, requirements, clientName);
       }
 
       files.push({ path: filePath, content });
     }
 
-    console.log(`✅ Generated ${files.length} files`);
+    // STEP 4: Validate deliverables
+    console.log("\n✅ STEP 4: Validating deliverables...");
+    const validation = validateDeliverables(requirements, files.map(f => f.path));
+    console.log(`   Completion score: ${validation.score}%`);
+    if (validation.missing.length > 0) {
+      console.log(`   Missing: ${validation.missing.join(", ")}`);
+    }
 
-    return { success: true, files };
+    console.log(`\n🎉 Generated ${files.length} files for ${requirements.projectType}`);
+
+    return { success: true, files, requirements };
   } catch (error) {
     console.error("❌ AI generation error:", error);
     return {
       success: false,
       files,
+      requirements,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
 /**
- * Generate package.json
+ * Generate file content using AI with full requirements context
  */
-function generatePackageJson(name: string, packageType: string): string {
+async function generateFileContentSmart(
+  openai: OpenAI,
+  filePath: string,
+  requirements: ProjectRequirements,
+  clientName: string
+): Promise<string> {
+  const fileType = getFileType(filePath);
+  
+  const systemPrompt = `You are an expert developer creating a ${requirements.projectType} project.
+
+PROJECT REQUIREMENTS:
+- Type: ${requirements.projectType}
+- Summary: ${requirements.summary}
+- Deliverables: ${requirements.deliverables.join(", ")}
+- Features: ${requirements.features.join(", ") || "As needed"}
+- Style: ${requirements.style.mood || "modern, professional"}
+- Tech Stack: ${requirements.techStack.join(", ")}
+
+CLIENT: ${clientName}
+ORIGINAL BRIEF: ${requirements.originalBrief}
+
+GUIDELINES:
+- Build EXACTLY what the client asked for
+- Use Next.js 14 with App Router and TypeScript
+- Use Tailwind CSS for styling
+- Create modern, professional, responsive designs
+- Include proper imports and exports
+- Make it production-ready
+
+FILE TYPE: ${fileType}
+FILE PATH: ${filePath}
+
+Generate ONLY the file content, no explanations. The code should be complete and match the client's requirements.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Generate the complete content for: ${filePath}
+
+Return ONLY the code, no markdown formatting, no \`\`\` blocks.`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 4000,
+  });
+
+  let content = response.choices[0]?.message?.content || "";
+  content = content.replace(/^```[\w]*\n?/gm, "").replace(/```$/gm, "").trim();
+
+  return content;
+}
+
+/**
+ * Generate documentation based on requirements
+ */
+async function generateDocumentation(
+  openai: OpenAI,
+  filePath: string,
+  requirements: ProjectRequirements,
+  clientName: string
+): Promise<string> {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a technical writer. Create documentation for a ${requirements.projectType} project.`,
+      },
+      {
+        role: "user",
+        content: `Create ${filePath} for this project:
+
+Client: ${clientName}
+Type: ${requirements.projectType}
+Summary: ${requirements.summary}
+Deliverables: ${requirements.deliverables.join(", ")}
+Features: ${requirements.features.join(", ") || "Standard features"}
+
+Include:
+- Project description
+- What was delivered
+- How to run/use
+- Technologies used
+
+Return ONLY markdown content.`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 1500,
+  });
+
+  return response.choices[0]?.message?.content || `# ${clientName}'s Project\n\n${requirements.summary}`;
+}
+
+/**
+ * Generate package.json based on project type
+ */
+function generatePackageJson(name: string, projectType: string): string {
+  // For logo-only projects, no package.json needed
+  if (projectType === "logo") {
+    return JSON.stringify({
+      name: name.replace(/[^a-z0-9-]/g, "-") + "-assets",
+      version: "1.0.0",
+      description: "Brand assets and logo files",
+    }, null, 2);
+  }
+
   const deps: Record<string, string> = {
     next: "14.0.0",
     react: "^18",
@@ -212,12 +368,9 @@ function generatePackageJson(name: string, packageType: string): string {
     postcss: "^8",
   };
 
-  if (packageType === "pro" || packageType === "scale") {
+  if (projectType === "webapp") {
     deps["next-auth"] = "^4.24.0";
     deps["lucide-react"] = "^0.294.0";
-  }
-
-  if (packageType === "scale") {
     deps["@prisma/client"] = "^5.0.0";
     deps["prisma"] = "^5.0.0";
   }

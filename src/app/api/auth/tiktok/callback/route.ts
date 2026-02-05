@@ -24,23 +24,44 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Debug: Check if env vars are loaded
+    console.log('TikTok OAuth Debug:', {
+      clientKeyExists: !!CLIENT_KEY,
+      clientKeyLength: CLIENT_KEY?.length,
+      clientKeyStart: CLIENT_KEY?.substring(0, 4),
+      secretExists: !!CLIENT_SECRET,
+    });
+
+    // Fallback to hardcoded if env not available (for debugging)
+    const clientKey = CLIENT_KEY || 'awmeovkn7kflgtoz';
+    const clientSecret = CLIENT_SECRET || 'PYC6VaaQDL3ptPGACjUbfHttKrfzxbEi';
+
     // Exchange code for tokens
+    const requestBody = new URLSearchParams({
+      client_key: clientKey,
+      client_secret: clientSecret,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: REDIRECT_URI,
+    });
+
+    console.log('Token request body params:', {
+      client_key: clientKey,
+      code: code.substring(0, 10) + '...',
+      redirect_uri: REDIRECT_URI,
+    });
+
     const tokenResponse = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_key: CLIENT_KEY || '',
-        client_secret: CLIENT_SECRET || '',
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: REDIRECT_URI,
-      }),
+      body: requestBody,
     });
 
     const tokens = await tokenResponse.json();
+    console.log('Token response:', JSON.stringify(tokens));
 
     if (tokens.error || tokens.data?.error_code) {
-      const errorMsg = tokens.error?.message || tokens.data?.description || JSON.stringify(tokens);
+      const errorMsg = JSON.stringify(tokens);
       return new NextResponse(
         generateHTML('❌ Token Error', errorMsg, null),
         { headers: { 'Content-Type': 'text/html' } }

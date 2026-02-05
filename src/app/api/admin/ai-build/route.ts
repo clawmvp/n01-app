@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: result.success,
         preview: true,
+        analysis: result.requirements ? {
+          projectType: result.requirements.projectType,
+          deliverables: result.requirements.deliverables,
+          summary: result.requirements.summary,
+          originalBrief: result.requirements.originalBrief,
+        } : null,
         filesCount: result.files.length,
         files: result.files.map(f => ({
           path: f.path,
@@ -45,14 +51,18 @@ export async function POST(request: NextRequest) {
 
     // Full build and deploy
     const result = await buildAndDeployProject(projectId);
+    
+    // Get updated project for requirements
+    const updatedProject = await getProject(projectId);
 
     return NextResponse.json({
       success: result.success,
       projectId,
       projectName: project.name,
+      brief: project.brief,
       filesGenerated: result.filesGenerated,
-      githubRepo: project.githubRepo,
-      vercelUrl: project.vercelUrl,
+      githubRepo: updatedProject?.githubRepo || project.githubRepo,
+      vercelUrl: updatedProject?.vercelUrl || project.vercelUrl,
       message: result.success 
         ? `🎉 Successfully generated ${result.filesGenerated} files and deployed!`
         : result.error,
