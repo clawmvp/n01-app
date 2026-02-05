@@ -131,14 +131,53 @@ export async function POST(request: NextRequest) {
         console.log("🚀 Vercel will auto-deploy from GitHub...");
       }
     } else {
-      // Use standard builder
-      const result = await buildAndDeployProject(projectId);
-      filesGenerated = result.filesGenerated;
+      // Use standard builder (OpenAI)
+      console.log("\n🔧 Using Standard Builder (OpenAI)...\n");
       
-      if (!result.success) {
+      const standardResult = await generateProject(projectId);
+      
+      if (!standardResult.success) {
         return NextResponse.json({
           success: false,
-          error: result.error,
+          error: standardResult.error || "Standard generation failed",
+        });
+      }
+
+      filesGenerated = standardResult.files.length;
+
+      // Push to GitHub if we have repo (use project from initial fetch)
+      if (project.githubRepo && process.env.GITHUB_TOKEN) {
+        console.log("\n📤 Pushing to GitHub...");
+        
+        const githubUrl = project.githubRepo.includes("github.com") 
+          ? project.githubRepo 
+          : `https://github.com/clawmvp/${project.githubRepo}`;
+        
+        const pushed = await pushToGitHub(
+          githubUrl,
+          standardResult.files.map(f => ({ path: f.path, content: f.content }))
+        );
+        
+        if (!pushed) {
+          return NextResponse.json({
+            success: false,
+            error: "Failed to push to GitHub",
+            filesGenerated,
+          });
+        }
+        
+        console.log("🚀 Vercel will auto-deploy from GitHub...");
+        
+        // Update project status
+        await updateProject(projectId, {
+          status: "delivered",
+          deliveredAt: new Date().toISOString(),
+        });
+      } else if (!project.githubRepo) {
+        return NextResponse.json({
+          success: false,
+          error: "No GitHub repo configured for this project",
+          filesGenerated,
         });
       }
     }
