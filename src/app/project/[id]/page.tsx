@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -30,6 +30,7 @@ interface Project {
   githubRepo?: string;
   vercelUrl?: string;
   previewUrl?: string;
+  zipUrl?: string;
 }
 
 const AGENT_INFO: Record<string, { name: string; role: string; avatar: string; color: string }> = {
@@ -45,18 +46,31 @@ const AGENT_INFO: Record<string, { name: string; role: string; avatar: string; c
 
 export default function ProjectTrackingPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
+  const accessToken = searchParams.get("token");
   
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const res = await fetch(`/api/project/${projectId}`);
+        // Include token in request if available
+        const tokenParam = accessToken ? `?token=${accessToken}` : "";
+        const res = await fetch(`/api/project/${projectId}${tokenParam}`);
         const data = await res.json();
+        
+        if (res.status === 401 || res.status === 403) {
+          setAuthError(data.error || "This project requires authentication");
+          setLoading(false);
+          return;
+        }
+        
         if (data.project) {
           setProject(data.project);
+          setAuthError(null);
         }
       } catch (error) {
         console.error("Failed to fetch project:", error);
@@ -69,7 +83,7 @@ export default function ProjectTrackingPage() {
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchProject, 30000);
     return () => clearInterval(interval);
-  }, [projectId]);
+  }, [projectId, accessToken]);
 
   if (loading) {
     return (
@@ -77,6 +91,26 @@ export default function ProjectTrackingPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted">Loading your project...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-3xl">🔐</span>
+          </div>
+          <h1 className="text-2xl font-bold mb-4">Access Restricted</h1>
+          <p className="text-muted mb-6">{authError}</p>
+          <p className="text-sm text-muted mb-6">
+            If you&apos;re the project owner, please use the secure link sent to your email.
+          </p>
+          <Link href="/" className="text-accent hover:underline">
+            Go to homepage
+          </Link>
         </div>
       </div>
     );
@@ -188,42 +222,75 @@ export default function ProjectTrackingPage() {
           </div>
         )}
 
-        {/* Deliverables (if available) */}
-        {(project.previewUrl || project.vercelUrl || project.githubRepo) && (
-          <div className="bg-foreground/5 rounded-2xl p-6 mb-8">
-            <h2 className="font-semibold mb-4">📦 Deliverables</h2>
-            <div className="grid gap-3">
-              {project.previewUrl && (
-                <a href={project.previewUrl} target="_blank" rel="noopener noreferrer" 
-                   className="flex items-center gap-3 p-4 bg-background rounded-xl hover:bg-foreground/5 transition-colors">
-                  <span className="text-2xl">👀</span>
-                  <div>
-                    <p className="font-medium">Preview</p>
-                    <p className="text-sm text-muted">See your project in action</p>
-                  </div>
-                </a>
-              )}
-              {project.vercelUrl && (
-                <a href={project.vercelUrl} target="_blank" rel="noopener noreferrer"
-                   className="flex items-center gap-3 p-4 bg-background rounded-xl hover:bg-foreground/5 transition-colors">
-                  <span className="text-2xl">🌐</span>
-                  <div>
-                    <p className="font-medium">Live Website</p>
-                    <p className="text-sm text-muted">{project.vercelUrl}</p>
-                  </div>
-                </a>
-              )}
-              {project.githubRepo && (
-                <a href={project.githubRepo} target="_blank" rel="noopener noreferrer"
-                   className="flex items-center gap-3 p-4 bg-background rounded-xl hover:bg-foreground/5 transition-colors">
-                  <span className="text-2xl">📦</span>
-                  <div>
-                    <p className="font-medium">Source Code</p>
-                    <p className="text-sm text-muted">GitHub Repository</p>
-                  </div>
-                </a>
-              )}
+        {/* Deliverables Section - Always show for delivered/completed */}
+        {(project.status === "delivered" || project.status === "completed" || project.previewUrl || project.vercelUrl || project.githubRepo) && (
+          <div className="bg-gradient-to-br from-green-500/10 to-teal-500/10 border border-green-500/20 rounded-2xl p-6 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🎉</span>
+              <h2 className="font-semibold text-lg">Your Deliverables</h2>
             </div>
+            
+            {(project.previewUrl || project.vercelUrl || project.githubRepo) ? (
+              <div className="grid gap-3">
+                {project.vercelUrl && (
+                  <a href={project.vercelUrl} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-4 p-4 bg-background/80 rounded-xl hover:bg-background transition-colors border border-green-500/10">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <span className="text-2xl">🌐</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Live Website</p>
+                      <p className="text-sm text-green-400 truncate">{project.vercelUrl}</p>
+                    </div>
+                    <span className="text-muted">→</span>
+                  </a>
+                )}
+                {project.previewUrl && project.previewUrl !== project.vercelUrl && (
+                  <a href={project.previewUrl} target="_blank" rel="noopener noreferrer" 
+                     className="flex items-center gap-4 p-4 bg-background/80 rounded-xl hover:bg-background transition-colors border border-cyan-500/10">
+                    <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center">
+                      <span className="text-2xl">👀</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Preview</p>
+                      <p className="text-sm text-muted">See your project in action</p>
+                    </div>
+                    <span className="text-muted">→</span>
+                  </a>
+                )}
+                {project.githubRepo && (
+                  <>
+                    <a href={project.githubRepo} target="_blank" rel="noopener noreferrer"
+                       className="flex items-center gap-4 p-4 bg-background/80 rounded-xl hover:bg-background transition-colors border border-blue-500/10">
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                        <span className="text-2xl">📦</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">Source Code</p>
+                        <p className="text-sm text-blue-400 truncate">{project.githubRepo.replace("https://github.com/", "")}</p>
+                      </div>
+                      <span className="text-muted">→</span>
+                    </a>
+                    <a href={`${project.githubRepo}/archive/refs/heads/main.zip`} target="_blank" rel="noopener noreferrer"
+                       className="flex items-center gap-4 p-4 bg-background/80 rounded-xl hover:bg-background transition-colors border border-purple-500/10">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                        <span className="text-2xl">📥</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">Download ZIP</p>
+                        <p className="text-sm text-muted">Get the complete source code</p>
+                      </div>
+                      <span className="text-muted">↓</span>
+                    </a>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-background/50 rounded-xl">
+                <p className="text-muted">Your deliverables are being prepared...</p>
+                <p className="text-sm text-muted mt-2">Check back soon or contact us at ai@n01.app</p>
+              </div>
+            )}
           </div>
         )}
 

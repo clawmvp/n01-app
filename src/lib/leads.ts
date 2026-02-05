@@ -9,6 +9,8 @@ export interface Lead {
   email: string;
   phone: string;
   projectDescription: string;
+  brief?: string; // Detailed project requirements
+  conversation?: string; // Chat history with ARIA
   preferredContact: "whatsapp" | "email";
   selectedPackage: string;
   source?: string;

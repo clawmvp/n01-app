@@ -7,7 +7,7 @@ import { kv } from "@vercel/kv";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, amount, network, txHash, packageName, password } = body;
+    const { email, name, amount, network, txHash, packageName, password, brief, conversation } = body;
 
     // Simple password protection
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "n01admin2024";
@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
       name: name || email.split("@")[0],
       email,
       phone: "",
-      projectDescription: `${packageName || "Custom"} package - Manual entry: $${amount || "?"} USDC on ${network}`,
+      projectDescription: `${packageName || "Custom"} package - $${amount || "?"} USDC on ${network}`,
+      brief: brief || `${packageName || "Custom"} project - awaiting requirements`,
+      conversation: conversation,
       preferredContact: "email",
       selectedPackage: packageName || "Custom",
       source: "manual-entry",

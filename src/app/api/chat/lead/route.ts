@@ -14,13 +14,27 @@ export async function POST(request: NextRequest) {
     // Generate lead ID
     const leadId = `L-${Date.now().toString(36).toUpperCase()}`;
 
+    // Extract brief from conversation (first few user messages)
+    let brief = "";
+    if (conversation) {
+      const userMessages = conversation
+        .split("\n")
+        .filter((line: string) => line.startsWith("user:"))
+        .map((line: string) => line.replace("user:", "").trim())
+        .slice(0, 5) // First 5 user messages
+        .join("\n");
+      brief = userMessages || `Service interest: ${service || "Not specified"}`;
+    }
+
     // Create lead object
     const lead: Lead = {
       id: leadId,
       name: name || "Chatbot Lead",
       email: email,
       phone: phone || "",
-      projectDescription: conversation || `Service interest: ${service || "Not specified"}`,
+      projectDescription: service || "Chat inquiry",
+      brief: brief || `Interested in: ${service || "general inquiry"}`,
+      conversation: conversation,
       preferredContact: phone ? "whatsapp" : "email",
       selectedPackage: pkg || "custom",
       source: source || "chatbot",

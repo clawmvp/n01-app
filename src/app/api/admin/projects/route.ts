@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllProjects, updateProject, advanceProjectTask, createProjectFromLead } from "@/lib/automation";
+import { getAllProjects, updateProject, advanceProjectTask, createProjectFromLead, processAutoProgress } from "@/lib/automation";
 import { getLead } from "@/lib/leads";
 
 export async function GET() {
   try {
+    // Auto-process progress on every fetch (real-time updates)
+    await processAutoProgress().catch(err => {
+      console.log("Auto-progress check:", err.message);
+    });
+    
     const projects = await getAllProjects();
     return NextResponse.json({ projects });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deliverProject, sendHandoverEmail } from "@/lib/delivery";
+import { deliverProject, sendHandoverEmail, sendDeliveryEmail } from "@/lib/delivery";
 import { getProject } from "@/lib/automation";
 
 export async function POST(request: NextRequest) {
@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (action === "send-email") {
+      // Send delivery email with current deliverables
+      const success = await sendDeliveryEmail(projectId);
+      return NextResponse.json({
+        success,
+        message: success ? "Delivery email sent" : "Failed to send delivery email",
+      });
+    }
+
     if (action === "handover") {
       // Send handover email with credentials
       const success = await sendHandoverEmail(projectId, credentials);
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       project,
-      availableActions: ["deliver", "handover"],
+      availableActions: ["deliver", "send-email", "handover"],
     });
   } catch (error) {
     console.error("Delivery error:", error);
