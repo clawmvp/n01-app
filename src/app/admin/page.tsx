@@ -203,6 +203,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [sendingPayment, setSendingPayment] = useState<string | null>(null);
   const [editingDeliverables, setEditingDeliverables] = useState<Project | null>(null);
+  const [analyzingProject, setAnalyzingProject] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
 
   const authenticate = () => {
     if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "n01admin2024") {
@@ -941,10 +943,99 @@ export default function AdminDashboard() {
                                 ✏️ Add Manually
                               </button>
                             </div>
+                            {/* Analyze Brief Button */}
+                            <button
+                              onClick={async () => {
+                                setAnalyzingProject(project.id);
+                                try {
+                                  const res = await fetch("/api/admin/analyze-brief", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ 
+                                      projectId: project.id, 
+                                      password: "n01admin2024" 
+                                    }),
+                                  });
+                                  const data = await res.json();
+                                  if (data.analysis) {
+                                    setAnalysisResults(prev => ({ ...prev, [project.id]: data.analysis }));
+                                  } else {
+                                    alert("❌ Analysis failed: " + (data.error || "Unknown error"));
+                                  }
+                                } catch (err) {
+                                  alert("❌ Failed to analyze brief");
+                                } finally {
+                                  setAnalyzingProject(null);
+                                }
+                              }}
+                              disabled={analyzingProject === project.id}
+                              className="px-4 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-700 transition disabled:opacity-50 w-full"
+                            >
+                              {analyzingProject === project.id ? "🔍 Analyzing..." : "🔍 Analyze Brief"}
+                            </button>
+
+                            {/* Analysis Results Display */}
+                            {analysisResults[project.id] && (
+                              <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="font-semibold text-blue-300">📊 AI Analysis</h5>
+                                  <button 
+                                    onClick={() => setAnalysisResults(prev => {
+                                      const next = { ...prev };
+                                      delete next[project.id];
+                                      return next;
+                                    })}
+                                    className="text-gray-400 hover:text-white text-sm"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-gray-400">Type:</span>
+                                    <span className="px-2 py-0.5 bg-purple-600 rounded text-white font-medium">
+                                      {analysisResults[project.id].projectType}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Summary:</span>
+                                    <p className="text-white mt-1">{analysisResults[project.id].summary}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Deliverables:</span>
+                                    <ul className="mt-1 space-y-1">
+                                      {analysisResults[project.id].deliverables?.map((d: string, i: number) => (
+                                        <li key={i} className="text-green-400">✓ {d}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  {analysisResults[project.id].features?.length > 0 && (
+                                    <div>
+                                      <span className="text-gray-400">Features:</span>
+                                      <ul className="mt-1 space-y-1">
+                                        {analysisResults[project.id].features?.slice(0, 5).map((f: string, i: number) => (
+                                          <li key={i} className="text-gray-300">• {f}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-4 pt-2 text-xs text-gray-400">
+                                    <span>Complexity: {analysisResults[project.id].complexity}</span>
+                                    <span>~{analysisResults[project.id].estimatedFiles} files</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* AI Build Button */}
                             {project.githubRepo && (
                               <button
                                 onClick={async () => {
-                                  if (!confirm(`🤖 AI Build: Generate complete application based on the project brief?\n\nThis will:\n• Generate all code files using AI\n• Create the actual website/app\n• Push to GitHub\n• Auto-deploy on Vercel\n\nThis may take 1-2 minutes.`)) return;
+                                  const analysis = analysisResults[project.id];
+                                  const confirmMsg = analysis 
+                                    ? `🤖 AI Build: Generate ${analysis.projectType.toUpperCase()}\n\nDeliverables:\n${analysis.deliverables?.map((d: string) => `• ${d}`).join('\n')}\n\nThis will:\n• Generate ~${analysis.estimatedFiles} files using AI\n• Push to GitHub\n• Auto-deploy on Vercel\n\nProceed?`
+                                    : `🤖 AI Build: Generate complete application based on the project brief?\n\nThis will:\n• Generate all code files using AI\n• Push to GitHub\n• Auto-deploy on Vercel\n\nTip: Click "Analyze Brief" first to see what will be generated.`;
+                                  if (!confirm(confirmMsg)) return;
                                   alert("🤖 AI Build started! This may take 1-2 minutes...");
                                   const res = await fetch("/api/admin/ai-build", {
                                     method: "POST",

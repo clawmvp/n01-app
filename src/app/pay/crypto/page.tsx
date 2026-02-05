@@ -11,6 +11,7 @@ function CryptoPaymentContent() {
   const amount = parseFloat(searchParams.get("amount") || "0");
   const email = searchParams.get("email") || "";
   const packageName = searchParams.get("package") || "Custom";
+  const leadIdFromUrl = searchParams.get("leadId") || "";
   
   const [selectedNetwork, setSelectedNetwork] = useState<"solana" | "ethereum" | null>(null);
   const [txHash, setTxHash] = useState("");
@@ -19,8 +20,8 @@ function CryptoPaymentContent() {
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate stable order ID
-  const orderId = useMemo(() => generateOrderId(), []);
+  // Use leadId from URL if available (links conversation to payment), otherwise generate new
+  const orderId = useMemo(() => leadIdFromUrl || generateOrderId(), [leadIdFromUrl]);
 
   const wallet = selectedNetwork ? CRYPTO_WALLETS.find((w) => w.network === selectedNetwork) : null;
   const discountedAmount = amount * (1 - CRYPTO_DISCOUNT);
@@ -41,7 +42,8 @@ function CryptoPaymentContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leadId: orderId,
+          // Pass leadId if we have one from URL (links to existing lead with conversation)
+          leadId: leadIdFromUrl || orderId,
           network: selectedNetwork,
           txHash,
           amount: discountedAmount,

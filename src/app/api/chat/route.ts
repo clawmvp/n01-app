@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { saveLead, getAllLeads, Lead } from "@/lib/leads";
 
 // Lazy initialization to avoid build-time errors
 let openai: OpenAI | null = null;
@@ -173,7 +174,7 @@ const recentPaymentLinks = new Map<string, number>();
 const PAYMENT_LINK_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 
 // Send payment link to customer
-async function sendPaymentLink(leadInfo: any, packageName: string): Promise<boolean> {
+async function sendPaymentLink(leadInfo: any, packageName: string, conversation?: string): Promise<boolean> {
   if (!leadInfo?.email) {
     console.log("Cannot send payment link: no email");
     return false;
@@ -190,10 +191,61 @@ async function sendPaymentLink(leadInfo: any, packageName: string): Promise<bool
   const pkg = PACKAGE_PRICES[pkgKey] || PACKAGE_PRICES.custom;
   const upfrontAmount = Math.round(pkg.price * 0.2);
 
+  // STEP 1: Save/Find lead with conversation BEFORE sending payment link
+  let leadId: string | null = null;
+  try {
+    // Check if lead already exists for this email
+    const allLeads = await getAllLeads();
+    const existingLead = allLeads.find(l => l.email === leadInfo.email);
+    
+    if (existingLead) {
+      leadId = existingLead.id;
+      console.log(`Found existing lead: ${leadId}`);
+    } else {
+      // Create new lead with conversation
+      leadId = `L-${Date.now().toString(36).toUpperCase()}`;
+      
+      // Extract brief from conversation (user messages)
+      let brief = "";
+      if (conversation) {
+        const userMessages = conversation
+          .split("\n")
+          .filter((line: string) => line.toLowerCase().startsWith("user:"))
+          .map((line: string) => line.replace(/^user:\s*/i, "").trim())
+          .filter((msg: string) => msg.length > 0)
+          .slice(0, 5) // First 5 user messages
+          .join("\n");
+        brief = userMessages || `${pkg.name} package request`;
+      }
+      
+      const newLead: Lead = {
+        id: leadId,
+        name: leadInfo.name || leadInfo.email.split("@")[0],
+        email: leadInfo.email,
+        phone: leadInfo.phone || "",
+        projectDescription: `${pkg.name} package - $${pkg.price}`,
+        brief: brief || `${pkg.name} package - awaiting detailed requirements`,
+        conversation: conversation,
+        preferredContact: leadInfo.phone ? "whatsapp" : "email",
+        selectedPackage: pkg.name,
+        source: "chatbot-payment",
+        createdAt: new Date().toISOString(),
+        status: "new",
+        paymentStatus: "pending",
+      };
+      
+      await saveLead(newLead);
+      console.log(`✅ Lead saved with conversation: ${leadId}`);
+    }
+  } catch (leadError) {
+    console.error("Failed to save lead:", leadError);
+  }
+
   console.log("=".repeat(60));
   console.log("💳 ARIA SENDING PAYMENT LINK");
   console.log("=".repeat(60));
   console.log(`To: ${leadInfo.email}`);
+  console.log(`Lead ID: ${leadId}`);
   console.log(`Package: ${pkg.name}`);
   console.log(`Total: $${pkg.price}`);
   console.log(`Upfront: $${upfrontAmount}`);
@@ -208,9 +260,10 @@ async function sendPaymentLink(leadInfo: any, packageName: string): Promise<bool
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Create payment link
-    const paymentUrl = `https://n01.app/pricing?package=${pkgKey}&email=${encodeURIComponent(leadInfo.email)}`;
-    const cryptoUrl = `https://n01.app/pay/crypto?amount=${upfrontAmount}&email=${encodeURIComponent(leadInfo.email)}`;
+    // Create payment link WITH leadId to link payment to conversation
+    const leadParam = leadId ? `&leadId=${leadId}` : "";
+    const paymentUrl = `https://n01.app/pricing?package=${pkgKey}&email=${encodeURIComponent(leadInfo.email)}${leadParam}`;
+    const cryptoUrl = `https://n01.app/pay/crypto?amount=${upfrontAmount}&email=${encodeURIComponent(leadInfo.email)}&package=${pkg.name}${leadParam}`;
 
     await resend.emails.send({
       from: "n01.app <ai@n01.app>",
@@ -404,14 +457,19 @@ export async function POST(request: NextRequest) {
     const paymentKeywords = ["payment", "pay", "link", "proceed", "ready", "quote", "invoice", "buy", "purchase", "sign me up", "let's do", "take my money", "i want", "i'll take"];
     const userWantsPayment = paymentKeywords.some(kw => lastUserMessage.includes(kw));
 
+    // Build conversation string for saving with lead
+    const conversationString = messages
+      .map((m: { role: string; content: string }) => `${m.role}: ${m.content}`)
+      .join("\n\n");
+
     // Check for payment link marker
     const paymentMatch = response.match(/\[SEND_PAYMENT:\s*(.+?)\]/i);
     if (paymentMatch && leadData?.email) {
       // Remove the marker from the response
       response = response.replace(/\s*\[SEND_PAYMENT:\s*.+?\]/i, "").trim();
       
-      // Send payment link
-      paymentLinkSent = await sendPaymentLink(leadData, paymentMatch[1].trim());
+      // Send payment link with conversation
+      paymentLinkSent = await sendPaymentLink(leadData, paymentMatch[1].trim(), conversationString);
       
       // Add confirmation to response
       if (paymentLinkSent && !response.toLowerCase().includes("sent") && !response.toLowerCase().includes("email")) {
@@ -427,7 +485,7 @@ export async function POST(request: NextRequest) {
       else if (lastUserMessage.includes("pro") || lastUserMessage.includes("133")) detectedPackage = "Pro";
       else if (leadData.package) detectedPackage = leadData.package;
       
-      paymentLinkSent = await sendPaymentLink(leadData, detectedPackage);
+      paymentLinkSent = await sendPaymentLink(leadData, detectedPackage, conversationString);
       
       if (paymentLinkSent) {
         response += `\n\n✅ I've sent a payment link for the ${detectedPackage} package to ${leadData.email}! Check your inbox.`;

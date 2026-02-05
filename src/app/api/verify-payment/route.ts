@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLead, updateLead, saveLead, Lead } from "@/lib/leads";
+import { getLead, updateLead, saveLead, Lead, getAllLeads } from "@/lib/leads";
 import { verifySolanaPayment, verifyEthPayment } from "@/lib/crypto";
 import { createProjectFromLead, getProjectProgress } from "@/lib/automation";
 
@@ -15,8 +15,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to find existing lead or use email for direct payment
+    // STEP 1: Try to find existing lead by leadId or email
     let lead = leadId ? await getLead(leadId) : null;
+    
+    // If no lead by ID, try to find by email (lead might have been saved earlier)
+    if (!lead && email) {
+      const allLeads = await getAllLeads();
+      lead = allLeads.find(l => l.email === email) || null;
+      if (lead) {
+        console.log(`✅ Found existing lead by email: ${lead.id}`);
+      }
+    }
+    
     const customerEmail = lead?.email || email;
 
     if (!customerEmail) {
@@ -34,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.verified) {
-      // If no lead exists, create one
+      // If no lead exists, create one (but try to keep brief/conversation if available)
       if (!lead && email) {
         const newLeadId = leadId?.startsWith("N01-") ? leadId : `L-${Date.now().toString(36).toUpperCase()}`;
         const pkg = packageName || "Custom";
@@ -44,6 +54,10 @@ export async function POST(request: NextRequest) {
           email,
           phone: "",
           projectDescription: `${pkg} package - Crypto payment: $${amount} USDC on ${network}`,
+          // Note: When lead is created without conversation, brief is generic
+          // This should be updated later or the client should provide requirements
+          brief: `${pkg} package - Awaiting detailed requirements from client`,
+          conversation: undefined,
           preferredContact: "email",
           selectedPackage: pkg,
           source: "crypto-direct",
@@ -56,8 +70,9 @@ export async function POST(request: NextRequest) {
         await saveLead(newLead);
         lead = newLead;
         console.log(`✅ New lead created: ${newLeadId}`);
+        console.log(`   ⚠️ Note: No conversation/brief - client should provide requirements`);
       } else if (lead) {
-        // Update existing lead
+        // Update existing lead - keep the brief and conversation!
         await updateLead(lead.id, {
           status: "paid",
           paymentStatus: "upfront_paid",
@@ -65,6 +80,9 @@ export async function POST(request: NextRequest) {
           cryptoNetwork: network,
           notes: `Crypto payment verified: ${network} tx ${txHash}`,
         });
+        console.log(`✅ Lead updated with payment: ${lead.id}`);
+        console.log(`   Brief preserved: ${lead.brief ? 'Yes' : 'No'}`);
+        console.log(`   Conversation preserved: ${lead.conversation ? 'Yes' : 'No'}`);
       }
 
       console.log("=".repeat(60));
