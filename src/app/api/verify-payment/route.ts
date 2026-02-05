@@ -115,7 +115,9 @@ export async function POST(request: NextRequest) {
             ? new Date(project.estimatedDelivery).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
             : "within 5-7 business days";
 
-          const trackingUrl = project ? `https://n01.app/project/${project.id}` : "https://n01.app";
+          const trackingUrl = project 
+            ? `https://n01.app/project/${project.id}?token=${project.accessToken}` 
+            : "https://n01.app";
 
           // Welcome email to customer
           await resend.emails.send({
