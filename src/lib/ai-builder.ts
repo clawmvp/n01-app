@@ -1,10 +1,11 @@
 // AI Project Builder
 // Generates complete applications based on client brief using AI
-// Now with smart brief analysis to build ONLY what client requested
+// Now with NOVA Orchestrator (Claude) for intelligent planning
 
 import OpenAI from "openai";
 import { Project, getProject, updateProject } from "./automation";
 import { analyzeBrief, getFileStructure, ProjectRequirements, validateDeliverables } from "./ai-analyzer";
+import { createWorkPlan, executeWorkPlan, WorkPlan } from "./orchestrator";
 
 // Initialize OpenAI
 function getOpenAI(): OpenAI {
@@ -241,6 +242,89 @@ export async function generateProject(projectId: string): Promise<{
       success: false,
       files,
       requirements,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Generate project using NOVA Orchestrator (Claude-powered)
+ * This is the premium version with intelligent planning and coordination
+ */
+export async function generateProjectWithNova(projectId: string): Promise<{
+  success: boolean;
+  files: { path: string; content: string }[];
+  workPlan?: WorkPlan;
+  validation?: { passed: boolean; score: number; issues: string[] };
+  error?: string;
+}> {
+  console.log("🧠 NOVA Orchestrator: Starting intelligent project generation...");
+  console.log("═".repeat(60));
+
+  const project = await getProject(projectId);
+  if (!project) {
+    return { success: false, files: [], error: "Project not found" };
+  }
+
+  const brief = project.brief || project.description || "A modern web application";
+  const conversation = project.conversation || "";
+
+  console.log("📋 Brief:", brief.substring(0, 200) + (brief.length > 200 ? "..." : ""));
+  console.log("💬 Conversation:", conversation ? "Available" : "Not available");
+
+  try {
+    // PHASE 1: Create work plan with Claude
+    console.log("\n🔍 PHASE 1: NOVA analyzing brief with Claude...");
+    const workPlan = await createWorkPlan(projectId, brief, conversation);
+    
+    console.log("\n📊 Work Plan Summary:");
+    console.log(`   Project Type: ${workPlan.analysis.projectType}`);
+    console.log(`   Complexity: ${workPlan.analysis.complexity}`);
+    console.log(`   Client Intent: ${workPlan.analysis.clientIntent}`);
+    console.log(`   Phases: ${workPlan.phases.length}`);
+    console.log(`   Estimated Time: ${workPlan.totalEstimatedMinutes} minutes`);
+    
+    workPlan.phases.forEach((phase, i) => {
+      console.log(`\n   Phase ${i + 1}: ${phase.name} (${phase.agent})`);
+      phase.tasks.forEach(task => {
+        console.log(`      - ${task.title}`);
+      });
+    });
+
+    // PHASE 2: Execute work plan
+    console.log("\n🚀 PHASE 2: Executing work plan...");
+    const result = await executeWorkPlan(workPlan, (phase, task, progress) => {
+      console.log(`   [${Math.round(progress)}%] ${phase}: ${task}`);
+    });
+
+    // Convert files to array format
+    const filesArray = Object.entries(result.files).map(([path, content]) => ({
+      path,
+      content,
+    }));
+
+    console.log("\n═".repeat(60));
+    console.log("🎉 NOVA Orchestrator: Project generation complete!");
+    console.log(`   Files generated: ${filesArray.length}`);
+    console.log(`   Validation score: ${result.validation.score}/100`);
+    console.log(`   Status: ${result.success ? "✅ PASSED" : "⚠️ NEEDS REVIEW"}`);
+    
+    if (result.validation.issues.length > 0) {
+      console.log("   Issues:");
+      result.validation.issues.forEach(issue => console.log(`      - ${issue}`));
+    }
+
+    return {
+      success: result.success,
+      files: filesArray,
+      workPlan,
+      validation: result.validation,
+    };
+  } catch (error) {
+    console.error("❌ NOVA Orchestrator error:", error);
+    return {
+      success: false,
+      files: [],
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
