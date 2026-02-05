@@ -205,6 +205,12 @@ export default function AdminDashboard() {
   const [editingDeliverables, setEditingDeliverables] = useState<Project | null>(null);
   const [analyzingProject, setAnalyzingProject] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  
+  // Auto-refresh state
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(10); // seconds
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(10);
 
   const authenticate = () => {
     if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD || password === "n01admin2024") {
@@ -216,8 +222,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [leadsRes, projectsRes] = await Promise.all([
         fetch("/api/admin/leads"),
@@ -229,12 +235,31 @@ export default function AdminDashboard() {
       
       setLeads(leadsData.leads || []);
       setProjects(projectsData.projects || []);
+      setLastRefresh(new Date());
+      setCountdown(refreshInterval);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!authenticated || !autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          fetchData(true); // Silent refresh
+          return refreshInterval;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [authenticated, autoRefresh, refreshInterval]);
 
   const updateLeadStatus = async (leadId: string, status: string) => {
     try {
@@ -366,8 +391,57 @@ export default function AdminDashboard() {
             <span className="text-gray-500">/ Admin</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={fetchData} className="text-gray-400 hover:text-white transition">
-              ↻ Refresh
+            {/* Auto-refresh controls */}
+            <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-1.5">
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`w-8 h-5 rounded-full transition-colors relative ${
+                  autoRefresh ? "bg-green-500" : "bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`absolute w-3.5 h-3.5 bg-white rounded-full top-0.5 transition-transform ${
+                    autoRefresh ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-400">
+                {autoRefresh ? (
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Live ({countdown}s)
+                  </span>
+                ) : (
+                  "Paused"
+                )}
+              </span>
+              {autoRefresh && (
+                <select
+                  value={refreshInterval}
+                  onChange={(e) => {
+                    setRefreshInterval(Number(e.target.value));
+                    setCountdown(Number(e.target.value));
+                  }}
+                  className="bg-gray-700 text-xs rounded px-1 py-0.5 border-none outline-none"
+                >
+                  <option value={5}>5s</option>
+                  <option value={10}>10s</option>
+                  <option value={30}>30s</option>
+                  <option value={60}>60s</option>
+                </select>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => fetchData(false)} 
+              className="text-gray-400 hover:text-white transition flex items-center gap-1"
+            >
+              <span className={loading ? "animate-spin" : ""}>↻</span>
+              {lastRefresh && (
+                <span className="text-xs text-gray-500">
+                  {lastRefresh.toLocaleTimeString()}
+                </span>
+              )}
             </button>
             <button
               onClick={() => {
