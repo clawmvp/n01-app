@@ -62,6 +62,45 @@ function scanDirectory(dir: string, projectName: string): VideoStats[] {
 
 export async function GET() {
   try {
+    // Check if we're running locally (has access to local files)
+    const isLocal = fs.existsSync(BASE_PATH);
+    
+    if (!isLocal) {
+      // Return demo data for cloud deployment
+      return NextResponse.json({
+        overview: {
+          totalVideos: 47,
+          totalSizeMB: 892,
+          videosToday: 0,
+          videosThisWeek: 12,
+        },
+        byProject: {
+          'P3 Long-to-Short': { count: 15, sizeMB: 245 },
+          'P6 Satisfying': { count: 10, sizeMB: 198 },
+          'P8 Recycler': { count: 8, sizeMB: 156 },
+          'Downloads': { count: 6, sizeMB: 134 },
+          'P4 Podcast': { count: 5, sizeMB: 98 },
+          'P9 Translation': { count: 3, sizeMB: 61 },
+        },
+        recentVideos: [
+          { name: 'clip_0.mp4', project: 'P3 Long-to-Short', size: 2.7, created: new Date().toISOString() },
+          { name: 'satisfying_48AnACeIXwQ.mp4', project: 'P8 Recycler', size: 4.3, created: new Date().toISOString() },
+        ],
+        uploadHistory: [
+          { date: new Date(Date.now() - 6*24*60*60*1000).toISOString().split('T')[0], count: 2 },
+          { date: new Date(Date.now() - 5*24*60*60*1000).toISOString().split('T')[0], count: 4 },
+          { date: new Date(Date.now() - 4*24*60*60*1000).toISOString().split('T')[0], count: 1 },
+          { date: new Date(Date.now() - 3*24*60*60*1000).toISOString().split('T')[0], count: 3 },
+          { date: new Date(Date.now() - 2*24*60*60*1000).toISOString().split('T')[0], count: 2 },
+          { date: new Date(Date.now() - 1*24*60*60*1000).toISOString().split('T')[0], count: 0 },
+          { date: new Date().toISOString().split('T')[0], count: 0 },
+        ],
+        scheduler: { pending: 26, uploaded: 2, failed: 0, schedule: [] },
+        isDemo: true,
+        message: 'Running on Vercel - showing demo data. Run locally for real stats.',
+      });
+    }
+    
     // Scan all output directories
     const outputDirs: { dir: string; project: string }[] = [
       { dir: 'examples/output/reddit-v2', project: 'P1 Reddit' },

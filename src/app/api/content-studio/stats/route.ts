@@ -15,6 +15,23 @@ interface ScheduledVideo {
 
 export async function GET() {
   try {
+    // Check if running locally
+    const isLocal = fs.existsSync(BASE_PATH);
+    
+    if (!isLocal) {
+      // Demo data for cloud
+      return NextResponse.json({
+        stats: {
+          totalVideos: 47,
+          totalUploads: 8,
+          scheduledToday: 4,
+          platforms: { youtube: 8, tiktok: 0, instagram: 0 },
+        },
+        scheduler: { pending: 26, uploaded: 2, failed: 0 },
+        isDemo: true,
+      });
+    }
+    
     // Read scheduler status
     const scheduleFile = path.join(AUTOMATION_PATH, 'schedule.json');
     const uploadLogFile = path.join(AUTOMATION_PATH, 'upload-log.json');
