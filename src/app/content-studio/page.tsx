@@ -43,7 +43,7 @@ const PROJECTS: Project[] = [
 ];
 
 export default function ContentStudioPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'scheduler' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'scheduler'>('dashboard');
   const [schedulerStatus, setSchedulerStatus] = useState<SchedulerStatus>({ pending: 0, uploaded: 0, failed: 0 });
   const [stats, setStats] = useState<Stats>({
     totalVideos: 0,
@@ -134,7 +134,7 @@ export default function ContentStudioPage() {
       {/* Navigation Tabs */}
       <nav className="border-b border-white/10 bg-black/10">
         <div className="max-w-7xl mx-auto px-4 flex gap-1">
-          {['dashboard', 'projects', 'scheduler', 'analytics'].map((tab) => (
+          {['dashboard', 'projects', 'scheduler'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as typeof activeTab)}
@@ -147,6 +147,12 @@ export default function ContentStudioPage() {
               {tab}
             </button>
           ))}
+          <Link
+            href="/content-studio/analytics"
+            className="px-4 py-3 font-medium capitalize text-gray-400 hover:text-white transition-colors"
+          >
+            📊 Analytics
+          </Link>
         </div>
       </nav>
 
@@ -320,19 +326,6 @@ export default function ContentStudioPage() {
           </div>
         )}
 
-        {/* Analytics Tab */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Analytics</h2>
-            <div className="bg-white/5 rounded-xl p-8 border border-white/10 text-center">
-              <span className="text-6xl mb-4 block">📊</span>
-              <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
-              <p className="text-gray-400">
-                YouTube Analytics, TikTok insights, and revenue tracking will be available here.
-              </p>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
