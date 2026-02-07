@@ -178,7 +178,14 @@ export async function GET() {
       };
     }
     
-    const analytics: AnalyticsData = {
+    // Load YouTube stats if available
+    const youtubeStatsFile = path.join(BASE_PATH, 'automation/youtube-stats.json');
+    let youtube = null;
+    if (fs.existsSync(youtubeStatsFile)) {
+      youtube = JSON.parse(fs.readFileSync(youtubeStatsFile, 'utf-8'));
+    }
+    
+    const analytics: AnalyticsData & { youtube?: any } = {
       overview: {
         totalVideos: allVideos.length,
         totalSizeMB,
@@ -189,6 +196,7 @@ export async function GET() {
       recentVideos,
       uploadHistory,
       scheduler,
+      youtube,
     };
     
     return NextResponse.json(analytics);

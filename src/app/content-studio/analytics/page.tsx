@@ -27,6 +27,11 @@ interface AnalyticsData {
     failed: number;
     schedule: any[];
   };
+  youtube?: {
+    channel?: { id: string; name: string; handle: string };
+    stats?: { videoCount: number; views: number; subscribers: number; lastUpdated: string };
+    uploadLimits?: { dailyLimit: number };
+  };
 }
 
 export default function AnalyticsPage() {
@@ -230,32 +235,71 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* YouTube Monetization Progress */}
-        <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-white/10">
-          <h2 className="text-xl font-semibold mb-4">🎯 YouTube Monetization Progress</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span>Subscribers</span>
-                <span className="text-gray-400">? / 1,000</span>
+        {/* YouTube Channel Stats */}
+        {data.youtube && (
+          <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-white/10">
+            <h2 className="text-xl font-semibold mb-4">📺 YouTube: {data.youtube.channel?.name || 'Short Vibes'}</h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-black/20 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-red-400">{data.youtube.stats?.videoCount || 0}</div>
+                <div className="text-sm text-gray-400">Videos</div>
               </div>
-              <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-red-500 to-pink-500" style={{ width: '0%' }} />
+              <div className="bg-black/20 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-blue-400">{data.youtube.stats?.views || 0}</div>
+                <div className="text-sm text-gray-400">Views</div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Connect YouTube Analytics for live data</p>
+              <div className="bg-black/20 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-purple-400">{data.youtube.stats?.subscribers || 0}</div>
+                <div className="text-sm text-gray-400">Subscribers</div>
+              </div>
+              <div className="bg-black/20 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-yellow-400">{data.youtube.uploadLimits?.dailyLimit || 10}</div>
+                <div className="text-sm text-gray-400">Daily Limit</div>
+              </div>
             </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span>Watch Hours</span>
-                <span className="text-gray-400">? / 4,000</span>
+
+            <h3 className="text-lg font-semibold mb-3">🎯 Monetization Progress</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span>Subscribers</span>
+                  <span className="text-gray-400">{data.youtube.stats?.subscribers || 0} / 1,000</span>
+                </div>
+                <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-red-500 to-pink-500" 
+                    style={{ width: `${Math.min(100, ((data.youtube.stats?.subscribers || 0) / 1000) * 100)}%` }} 
+                  />
+                </div>
               </div>
-              <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: '0%' }} />
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span>Videos Uploaded</span>
+                  <span className="text-gray-400">{data.youtube.stats?.videoCount || 0} / 100 goal</span>
+                </div>
+                <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                    style={{ width: `${Math.min(100, ((data.youtube.stats?.videoCount || 0) / 100) * 100)}%` }} 
+                  />
+                </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Requires YouTube API integration</p>
             </div>
+            
+            <p className="text-xs text-gray-500 mt-4">
+              Channel: @{data.youtube.channel?.handle?.replace('@', '') || 'n01shortvibes'} • 
+              Last updated: {data.youtube.stats?.lastUpdated ? new Date(data.youtube.stats.lastUpdated).toLocaleDateString() : 'N/A'}
+            </p>
           </div>
-        </div>
+        )}
+        
+        {!data.youtube && (
+          <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-white/10">
+            <h2 className="text-xl font-semibold mb-4">📺 YouTube Stats</h2>
+            <p className="text-gray-400">YouTube stats will appear here after first upload.</p>
+          </div>
+        )}
       </main>
     </div>
   );
